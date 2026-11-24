@@ -1,6 +1,6 @@
 # actiontrack: Requirements
 
-**Version:** v1.2 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed.
+**Version:** v1.3 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed.
 **Date:** 2026-11-24
 **Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and marked **Assumption**)
 
