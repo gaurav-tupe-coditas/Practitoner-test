@@ -8,6 +8,7 @@ __pycache__/
 *.db
 *.sqlite3
 drafts/
+report.html
 
 # Secrets / env: never committed
 .env

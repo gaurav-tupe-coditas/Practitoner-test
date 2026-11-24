@@ -9,9 +9,11 @@ Needs only Python 3.10+ (tested on 3.13). Nothing to install for the app itself.
 from __future__ import annotations
 
 import os
+import pathlib
 import re
 import subprocess
 import sys
+import webbrowser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -19,6 +21,7 @@ sys.path.insert(0, HERE)
 DB = os.path.join(HERE, "actiontrack.db")
 NOTES = os.path.join(HERE, "notes")
 DRAFTS = os.path.join(HERE, "drafts")
+REPORT = os.path.join(HERE, "report.html")
 
 MENU = """
 actiontrack - track action items from meeting notes
@@ -29,6 +32,7 @@ actiontrack - track action items from meeting notes
   4) Draft a follow-up     one email per person (saved as a draft, never sent)
   5) Run self-test         check the app works on this computer
   6) Help                  what each option does
+  7) Open report           pretty HTML view of all items, opens in your browser
   0) Quit
 """
 
@@ -41,6 +45,7 @@ Typical order: 1 (load notes) -> 2 (show items) -> 3 (mark done) -> 4 (draft a f
   Show items      Leave a question blank to skip that filter. Status: open, done or overdue.
                   Overdue = not done and past its due date (no due date counts as meeting + 7 days).
   Mark done       Use the ID number from the list.
+  Report          Writes report.html (searchable table of every item) and opens it in your browser.
   Follow-up       Creates ONE draft for a person covering their open and overdue items.
                   Drafts are saved in the 'drafts' folder. Nothing is ever sent.
                   If two people share a first name, use the full name.
@@ -120,8 +125,18 @@ def do_selftest() -> None:
     print()
 
 
+def do_report() -> None:
+    if call(["report", "--out", REPORT]) != 0:
+        return
+    try:
+        webbrowser.open(pathlib.Path(REPORT).resolve().as_uri())
+    except webbrowser.Error:
+        pass
+    print(f"Report saved at: {REPORT}  (open it in a browser if it did not appear)\n")
+
+
 ACTIONS = {"1": do_ingest, "2": do_list, "3": do_done, "4": do_followup, "5": do_selftest,
-           "6": lambda: print(HELP)}
+           "6": lambda: print(HELP), "7": do_report}
 
 
 def menu() -> int:
@@ -132,12 +147,12 @@ def menu() -> int:
                 call(["ingest", NOTES])
         while True:
             print(MENU)
-            choice = ask("Choose 0-6")
+            choice = ask("Choose 0-7")
             if choice == "0":
                 return 0
             action = ACTIONS.get(choice)
             if action is None:
-                print("Please type a number from 0 to 6.\n")
+                print("Please type a number from 0 to 7.\n")
                 continue
             action()
     except (EOFError, KeyboardInterrupt):

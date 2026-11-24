@@ -71,7 +71,7 @@ def test_bad_input_keeps_menu_running(env, monkeypatch, capsys):  # T-43
     assert run.main([]) == 0
     cap = capsys.readouterr()
     out, err = cap.out, cap.err
-    assert "Please type a number from 0 to 6" in out
+    assert "Please type a number from 0 to 7" in out
     assert "Please type the ID number" in out
     assert "does not look like an email" in out
     assert "Status must be open, done or overdue" in out

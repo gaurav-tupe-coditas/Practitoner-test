@@ -7,7 +7,7 @@ import re
 import sys
 from datetime import date
 
-from . import service
+from . import report, service
 from .sinks import ClaudeGmailDraftSink, FileDraftSink, SinkError
 from .store import Store
 
@@ -32,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("--status", choices=["open", "done", "overdue"])
     ls.add_argument("--due-before", type=_iso)
     sub.add_parser("done").add_argument("id", type=int)
+    sub.add_parser("report").add_argument("--out", default="report.html")
     fu = sub.add_parser("followup")
     fu.add_argument("owner")
     fu.add_argument("--to", required=True)
@@ -104,6 +105,16 @@ def _run(args, out, err, sink_factory) -> int:
                 print(f"AT-E001 no item with id {args.id}", file=err)
                 return 1
             print(f"item {args.id} marked done" if newly else f"item {args.id} was already done", file=out)
+            return 0
+        if args.cmd == "report":
+            page = report.render_report(service.list_items(store, today), today)
+            try:
+                with open(args.out, "w", encoding="utf-8") as fh:      # the only file this command writes
+                    fh.write(page)
+            except OSError as exc:
+                print(f"AT-E005 cannot write {args.out}: {exc.strerror or exc.__class__.__name__}", file=err)
+                return 1
+            print(f"report written to {args.out}", file=out)
             return 0
         return _followup(args, store, today, out, err, sink_factory)
     finally:

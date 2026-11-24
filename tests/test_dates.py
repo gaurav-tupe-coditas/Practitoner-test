@@ -32,7 +32,7 @@ THU = date(2026, 9, 3)    # Thursday
     ("whenever", MON, None),
     ("31 Feb", MON, None),
 ])
-def test_resolve_due(phrase, meeting, expected):
+def test_resolve_due(phrase, meeting, expected):  # T-15
     assert resolve_due(phrase, meeting) == expected
 
 
