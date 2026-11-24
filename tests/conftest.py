@@ -33,3 +33,11 @@ def run_cli(tmp_path, *args, today="2026-10-01", db=None, sink_factory=None):
 
 
 TODAY = date(2026, 10, 1)
+
+
+@pytest.fixture(autouse=True)
+def _isolated_cwd(tmp_path, monkeypatch):
+    """Commands write report.html in the working directory; keep the repo clean."""
+    import run
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run, "REPORT", str(tmp_path / "report.html"))

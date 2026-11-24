@@ -30,7 +30,7 @@ BRIEF = [
     ("list with --owner, --status open|done|overdue, --due-before", "ok", "FR-6"),
     ("done <id>", "ok", "FR-7"),
     ("followup: one email per owner, open and overdue items, never sends", "ok", "FR-8; no send path exists, tested"),
-    ("Gmail draft through the Gmail MCP connector", "warn", "via claude CLI sink; live draft check pending"),
+    ("Gmail draft through the Gmail MCP connector", "ok", "claude CLI sink; live drafts created and confirmed unsent (2026-11-24)"),
     ("duplicates across meetings", "ok", "FR-5, ADR-001"),
     ("items with no owner or no due date", "ok", "FR-3, FR-4, flagged in report"),
     ("two people with the same first name", "ok", "flagged ambiguous, never guessed"),
@@ -41,7 +41,6 @@ BRIEF = [
 OPEN = [
     ("warn", "docs/baseReq.md is truncated", "Behaviour was inferred from notes/ and marked Assumption; to be diffed against the full brief."),
     ("warn", "Assumptions S-5 and S-6", "Awaiting user confirmation."),
-    ("warn", "Live Gmail draft", "Create-draft tool name is verified against the connector; an end-to-end draft still needs a recipient from the user."),
     ("info", "Summary freshness", "Rebuild with python tools/build_summary.py after any change."),
 ]
 

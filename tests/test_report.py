@@ -120,3 +120,35 @@ def test_summary_build():  # T-49
     assert "prefers-color-scheme:dark" in page
     for name in ("skipped scratch.md", "untitled.md"):
         assert name.split()[-1] in page
+
+
+def test_report_auto_refresh(tmp_path):  # T-50
+    notes = tmp_path / "n"
+    notes.mkdir()
+    seed(notes)
+    rep = tmp_path / "auto.html"
+    db = str(tmp_path / "x.db")
+
+    import io
+    from actiontrack import cli
+
+    def call(*args):
+        out, err = io.StringIO(), io.StringIO()
+        code = cli.main(["--db", db, "--today", "2026-10-01", *args], out=out, err=err)
+        return code, out.getvalue(), err.getvalue()
+
+    assert call("--report", str(rep), "ingest", str(notes))[0] == 0
+    assert card(rep.read_text(encoding="utf-8"), "Items") == 3
+    rep.unlink()
+    code, out, err = call("--report", str(rep), "list")
+    assert code == 0 and rep.exists() and f"report updated: {rep}" in out
+    assert call("--report", str(rep), "done", "1")[0] == 0
+    assert card(rep.read_text(encoding="utf-8"), "Done") == 2
+    stamp = rep.stat().st_mtime_ns
+    call("--report", str(rep), "followup", "Sam Okafor", "--to", "x@example.invalid", "--drafts-dir", str(tmp_path / "d"))
+    assert rep.stat().st_mtime_ns == stamp                                   # followup does not refresh
+    rep.unlink()
+    assert call("--report", str(rep), "--no-report", "list")[0] == 0 and not rep.exists()
+    bad = tmp_path / "nope" / "r.html"
+    code, out, err = call("--report", str(bad), "list")
+    assert code == 0 and "AT-W001" in err and "Traceback" not in err

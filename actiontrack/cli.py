@@ -25,6 +25,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="actiontrack")
     p.add_argument("--db", default="actiontrack.db")
     p.add_argument("--today", type=_iso, default=None)
+    p.add_argument("--report", default="report.html", help="HTML report refreshed after ingest, list and done")
+    p.add_argument("--no-report", action="store_true")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("ingest").add_argument("folder")
     ls = sub.add_parser("list")
@@ -86,6 +88,7 @@ def _run(args, out, err, sink_factory) -> int:
         if args.cmd == "ingest":
             for line in service.ingest(store, args.folder).lines():
                 print(line, file=out)
+            _refresh_report(args, store, today, out, err)
             return 0
         if args.cmd == "list":
             try:
@@ -97,6 +100,7 @@ def _run(args, out, err, sink_factory) -> int:
                 print("no items", file=out)
             else:
                 _print_table(items, today, out)
+            _refresh_report(args, store, today, out, err)
             return 0
         if args.cmd == "done":
             try:
@@ -105,12 +109,11 @@ def _run(args, out, err, sink_factory) -> int:
                 print(f"AT-E001 no item with id {args.id}", file=err)
                 return 1
             print(f"item {args.id} marked done" if newly else f"item {args.id} was already done", file=out)
+            _refresh_report(args, store, today, out, err)
             return 0
         if args.cmd == "report":
-            page = report.render_report(service.list_items(store, today), today)
             try:
-                with open(args.out, "w", encoding="utf-8") as fh:      # the only file this command writes
-                    fh.write(page)
+                _write_report(store, today, args.out)
             except OSError as exc:
                 print(f"AT-E005 cannot write {args.out}: {exc.strerror or exc.__class__.__name__}", file=err)
                 return 1
@@ -119,6 +122,24 @@ def _run(args, out, err, sink_factory) -> int:
         return _followup(args, store, today, out, err, sink_factory)
     finally:
         store.close()
+
+
+def _write_report(store, today, path) -> None:
+    page = report.render_report(service.list_items(store, today), today)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(page)
+
+
+def _refresh_report(args, store, today, out, err) -> None:
+    """AC-11.6: keep the HTML view current. Never changes the command's result."""
+    if args.no_report:
+        return
+    try:
+        _write_report(store, today, args.report)
+    except OSError as exc:
+        print(f"AT-W001 could not update report: {exc.strerror or exc.__class__.__name__}", file=err)
+        return
+    print(f"report updated: {args.report}", file=out)
 
 
 def _followup(args, store, today, out, err, sink_factory) -> int:

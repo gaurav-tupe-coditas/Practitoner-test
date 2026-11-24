@@ -41,3 +41,11 @@ Central ADRs: `docs/adr/ADR-0001`, `ADR-0002`. Newest last.
 - **Context:** Results are easier to read in a browser. Note text is untrusted input and could contain markup.
 - **Decision:** Build HTML with string templates and `html.escape`; no template engine, no CDN, no external fonts. One shared `report.py` serves the app and the summary builder. The summary is regenerated from real runs, not hand-written, so it cannot drift from the code.
 - **Consequences:** Zero new dependencies; works offline; the summary must be rebuilt (`python tools/build_summary.py`) after changes.
+
+### ADR-ACTIONTRACK-006: The report refreshes after ingest, list and done
+- **Status:** Accepted
+- **Date:** 2026-11-24
+- **Decided by:** User (wants the HTML created each time the command runs); command choice delegated to Claude
+- **Context:** A report that must be asked for goes stale. Which commands should refresh it?
+- **Decision:** Refresh after `ingest`, `done` (they change the data) and `list` (the view the user is looking at). Not `followup` (changes no items). Always the full item set. Opt out with `--no-report`; location with `--report`. Write failure is a warning, never a failed command.
+- **Consequences:** `list` and `ingest` now write a file in the working directory (default `report.html`, git-ignored). Tests isolate the working directory so the repo is never written.

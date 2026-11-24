@@ -1,6 +1,6 @@
 # actiontrack: Requirements
 
-**Version:** v1.3 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed.
+**Version:** v1.4 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed. v1.4: user-requested AC-11.6 (report refreshes on every data command); AC-11.3 widened to match.
 **Date:** 2026-11-24
 **Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and marked **Assumption**)
 
@@ -99,8 +99,9 @@ One file a user can run directly, which takes care of setup checks and shows how
 A visual view of the tracked items and of the project's evidence, so a person can read results in a browser.
 - AC-11.1 `actiontrack report [--out FILE]` writes one self-contained HTML file (default `report.html`): counts (total, overdue, open, done, unassigned, ambiguous owner), then every item in a table that can be searched and filtered by status. It works offline and with scripting disabled (all rows visible).
 - AC-11.2 Every piece of text that came from a note is HTML-escaped, so a note cannot inject markup or script into the report.
-- AC-11.3 The report uses the same "today" as `list` and shows the as-of date. It never writes anywhere except the chosen output file.
+- AC-11.3 The report uses the same "today" as `list` and shows the as-of date. It never writes anywhere except the report file (`--out`, or `report.html`).
 - AC-11.4 The launcher menu has an option that generates the report and opens it in the default browser.
+- AC-11.6 (v1.4) The report is regenerated automatically, with the same "today", after every successful `ingest`, `list` and `done`, so the browser view is never stale. `followup` does not change items and does not refresh it. The file is `report.html` (global `--report FILE` to move it, `--no-report` to switch it off). A failure to write it is a warning and never changes the command's exit code. The report always shows all items, whatever filter `list` used. (**Decided 2026-11-24**, commands chosen by Claude on the user's instruction)
 - AC-11.5 `tools/build_summary.py` builds `docs/summary.html` from real results: test run, a run over `notes/`, test-plan coverage, the SDD trail and open items. Nothing in it is typed by hand except the brief checklist and the open-items list.
 
 ## 5. Non-functional requirements
@@ -126,6 +127,7 @@ A visual view of the tracked items and of the project's evidence, so a person ca
 | 2026-11-24 | A-4: `Everyone` = one item per attendee | User |
 | 2026-11-24 | A-10: undated note is skipped whole and reported | User |
 | 2026-11-24 | A-3, A-5, A-8 kept as written | User |
+| 2026-11-24 | AC-11.6: report.html refreshes after ingest, list, done (not followup) | User |
 
 ## 7. Assumptions to veto (A-1 to A-10)
 

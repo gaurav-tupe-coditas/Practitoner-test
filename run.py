@@ -62,7 +62,7 @@ def ask(prompt: str, default: str = "") -> str:
 
 def call(args: list[str]) -> int:
     from actiontrack import cli
-    code = cli.main(["--db", DB, *args])
+    code = cli.main(["--db", DB, "--report", REPORT, *args])
     print()
     return code
 

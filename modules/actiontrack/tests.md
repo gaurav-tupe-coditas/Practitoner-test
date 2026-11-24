@@ -82,4 +82,5 @@ Every rule R1-R19 and every AC (1.1-1.4, 2.1-2.6, 3.1-3.6, 4.1-4.5, 5.1-5.3, 6.1
 | T-46 report-escapes | R21, AC-11.2 | U | task text `<script>alert(1)</script>` and owner `A&B` | rendered as `&lt;script&gt;...`; no raw `<script>alert` |
 | T-47 report-asof | R21, AC-11.3 | I | `--today 2026-10-01` | as-of date shown; overdue count uses it |
 | T-48 menu-report | R21, AC-11.4 | I | menu option 7 with the browser opener faked | report file exists, opener called once |
+| T-50 report-auto | R22, AC-11.6 | I | run `ingest`, `list`, `done`; then `followup`; then with `--no-report`; then an unwritable `--report` | file exists and reflects the data after each of the first three; unchanged mtime after `followup`; not created with `--no-report`; unwritable path gives `AT-W001` and exit code unchanged |
 | T-49 summary-build | R21, AC-11.5 | I | `build_summary.build(run_tests=False)` on the real repo | HTML has the test, notes-run, coverage, SDD-trail and open-items sections |

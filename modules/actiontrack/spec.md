@@ -29,6 +29,7 @@
 | R20 | `run.py` (v1.2): no arguments -> version check (3.10+) then menu; with arguments -> same as `python -m actiontrack`. Menu data lives next to the launcher (`actiontrack.db`, `drafts/`, `notes/`), so it works from any folder. Offers to load `notes/` when no data file exists. EOF or Ctrl+C exits 0. Menu calls `cli.main` in-process; the only subprocess is the optional self-test (`pytest`). | AC-10.1..10.6 |
 
 | R21 | `report.py` (v1.3): pure functions that return an HTML string; every note-derived value goes through `html.escape`; no external fonts, scripts or links; light and dark colours via `prefers-color-scheme`. CLI `report` writes only the `--out` file. `tools/build_summary.py` reuses `report.py` and writes `docs/summary.html`. | AC-11.1..11.5 |
+| R22 | CLI global options `--report FILE` (default `report.html`) and `--no-report`. After a successful `ingest`, `list` or `done` the CLI writes the full report (all items, same `today`) and prints `report updated: <file>`. `followup` and failed commands do not. A write failure prints `AT-W001 could not update report: ...` to stderr and keeps the exit code. The launcher passes `--report` pointing at its own folder. | AC-11.6 |
 
 ## 2. Due-phrase resolution (base = meeting date `M`)
 
@@ -84,7 +85,7 @@ NFR-1..7 apply as written. `ClaudeGmailDraftSink` runs `claude` with a fixed arg
 ## 8. Contract requests / open questions / assumptions
 
 - Contract requests: none (single module).
-- **Assumption S-3:** the `claude` CLI flag set for allowing a single tool is checked at implementation time; if it differs, only `sinks.py` changes. **Checked 2026-11-24 against the live Gmail connector:** the create-draft tool is `mcp__claude_ai_Gmail__create_draft`, identical to `GMAIL_CREATE_DRAFT_TOOL`; no code change needed. The end-to-end draft run is still pending (needs the user's test address).
+- **Assumption S-3:** the `claude` CLI flag set for allowing a single tool is checked at implementation time; if it differs, only `sinks.py` changes. **Checked 2026-11-24 against the live Gmail connector:** the create-draft tool is `mcp__claude_ai_Gmail__create_draft`, identical to `GMAIL_CREATE_DRAFT_TOOL`; no code change needed. **End-to-end run 2026-11-24:** `followup --sink claude` created Gmail drafts (label DRAFT, none in Sent), exit 0. Recipients are deliberately not recorded anywhere in the repo.
 - **Assumption S-4:** `list` truncates nothing; long tasks wrap is not handled (plain columns).
 - **Assumption S-5:** AC-5.3 "latest meeting's due wins" means the latest meeting that states a due date; a repeat with no due date does not erase an earlier one (see T-17).
 - **Assumption S-6:** `list --status open` shows every not-done item (overdue ones included, shown with status `overdue`); `--status overdue` narrows to the overdue ones. A task's due phrase is also read after `on` only when it is a full ISO date.

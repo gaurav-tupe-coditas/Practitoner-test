@@ -37,7 +37,7 @@ python -m actiontrack report [--out report.html]        # or menu option 7, whic
 python tools/build_summary.py                           # rebuilds docs/summary.html (runs the tests and the app over notes/)
 ```
 
-`report.html` (project folder, not committed) is one offline file: counts, then every item in a searchable table with status filters. It uses the same `--today` as `list`, and all note text is HTML-escaped. `docs/summary.html` is the generated project summary: test result, a run over `notes/`, test-plan coverage, the spec-driven trail, brief vs delivered, open items. Rebuild it after any change.
+`report.html` is also refreshed automatically after every `ingest`, `list` and `done` (not `followup`), so it is never stale; it always shows all items. Use `--report FILE` to move it or `--no-report` to switch it off (global options, before the command). `report.html` (not committed) is one offline file: counts, then every item in a searchable table with status filters. It uses the same `--today` as `list`, and all note text is HTML-escaped. `docs/summary.html` is the generated project summary: test result, a run over `notes/`, test-plan coverage, the spec-driven trail, brief vs delivered, open items. Rebuild it after any change.
 
 Exit codes: 0 ok, 1 not found or invalid input, 2 ambiguous owner or bad usage, 3 draft sink failure.
 

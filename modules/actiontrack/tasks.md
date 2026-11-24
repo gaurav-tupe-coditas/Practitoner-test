@@ -35,4 +35,6 @@
 ## Phase 9: HTML report (v1.3)
 - [x] 9.1 `report.py`, `report` command, menu option 7, `tools/build_summary.py`, `docs/summary.html`. Tests: T-45..T-49 in `tests/test_report.py`.
 
+- [x] 9.2 (v1.4) Auto-refresh `report.html` after ingest, list, done: `--report`, `--no-report`, `AT-W001` warning. Tests: T-50. ADR-ACTIONTRACK-006.
+
 ## Coverage: every test T-01..T-37 is assigned to a task above.
