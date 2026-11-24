@@ -7,6 +7,7 @@ __pycache__/
 # actiontrack local data store (generated)
 *.db
 *.sqlite3
+drafts/
 
 # Secrets / env: never committed
 .env
