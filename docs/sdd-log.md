@@ -22,4 +22,6 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | Time | Stage | File | Event |
 |---|---|---|---|
 | 16:19 | Orient | - | No SDD structure, not a git repo. `docs/baseReq.md` is truncated. Notes folder inspected (34 files). Repo initialised. |
-| 16:2x | Requirements | `docs/requirements.md` | v0.9 draft written, awaiting user confirmation |
+| 16:22 | Requirements | `docs/requirements.md` | v0.9 draft written, sent for confirmation |
+| 16:25 | Privacy | repo + git history | User rule W-6: no org or personal details anywhere. Audit found a leak in the log and the git author identity; fixed, commit rewritten, generic identity set |
+| 16:28 | Requirements | `docs/requirements.md` | Rev 2: A-6 on-or-after, A-9 meeting date + 7 days, A-4 Everyone = every attendee, A-10 kept. User confirmed final, frozen at v1.0 |
