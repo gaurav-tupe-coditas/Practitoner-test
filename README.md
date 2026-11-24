@@ -39,6 +39,8 @@ python tools/build_summary.py                           # rebuilds docs/summary.
 
 `report.html` is also refreshed automatically after every `ingest`, `list` and `done` (not `followup`), so it is never stale; it always shows all items. Use `--report FILE` to move it or `--no-report` to switch it off (global options, before the command). `report.html` (not committed) is one offline file: counts, then every item in a searchable table with status filters. It uses the same `--today` as `list`, and all note text is HTML-escaped. `docs/summary.html` is the generated project summary: test result, a run over `notes/`, test-plan coverage, the spec-driven trail, brief vs delivered, open items. Rebuild it after any change.
 
+Sending: the app never sends mail; it only creates drafts. `ACTIONTRACK_ALLOW_SEND` (see `.env.example`, default `0`) is the master switch that keeps an assistant from sending unless you turn it on.
+
 Exit codes: 0 ok, 1 not found or invalid input, 2 ambiguous owner or bad usage, 3 draft sink failure.
 
 ## Tests

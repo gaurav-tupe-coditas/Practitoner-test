@@ -1,0 +1,1222 @@
+[USER] so we are going through an evalutaion on how to better use claude, for that we will be having the test for using claude using the sdd way of doing stuff, so for now we will be using our /sdd-epic way of doing stuff, for this project we want the sdd files to be also to logged and then get commited, so for that we will have to log these files as well, we have the baseReq.md in the docs folder, we have to complete this project in 30 minutes so based on that lets get it done, start with the /sdd-epic way of doing this
+
+[TOOL] Skill {"skill": "sdd-epic"}
+
+[RESULT] Launching skill: sdd-epic
+
+[USER] Base directory for this skill: C:\Users\[user]\.claude\skills\sdd-epic
+
+# SDD + EPIC workflow
+
+Process matters as much as product. Specs come first, each file is confirmed by the user before the next starts, and implementation follows Explore, Plan, Implement, Commit.
+
+## 0. Orient first (always)
+
+1. Read `CLAUDE.md` if present, then check which of the files below already exist. Resume from what exists; never restart a stage that is done.
+2. If the project has no SDD structure, propose it (section 1) and ask before creating anything.
+3. If the project has its own `CLAUDE.md` rules, they override this skill where they conflict.
+
+## Autopilot mode (on for Stessa work; off elsewhere unless the user turns it on)
+
+The user set this on 2026-11-24 for work projects (Stessa), where deadlines no longer leave room for a gate on every file. In autopilot, Claude steers and the user steps in only for decisions that are hard to undo. This overrides the per-file gates and the "ask every question" rules below **for that project only**. Learning projects (Shardlands, Tessera, HMT) keep the full gates.
+
+- **Take the recommended route** on every topic. Still write `analysis.md` and record each choice in `adr.md`, [masked]ed "Decided by Claude (autopilot)", so the reasoning can be read later during a bug hunt or an interview drill.
+- **Move through the stages without stopping** for confirmation: requirements → spec → tests → plan → build, each file checked against the one before as usual.
+- **Stop and ask only for one-way doors**: a choice that is expensive or impossible to reverse later. For example: database schema and migrations on shared data, public API or tool contracts other teams or clients will depend on, auth and security models (token handling, scopes, who can see what), anything that writes to external systems or prod, new dependencies or infra that lock the project in, data deletion or retention, and anything that contradicts a written requirement or a reviewer's earlier decision. Group these into one message: the decision, the recommendation, what it locks in, and what reversing it would cost.
+- **Never skip the safety rules** in either mode: no env values in commits, no prod writes, project CLAUDE.md rules still win, commits only when the user asks.
+- **End each stage with a short "what I decided and why" list** (one line per decision) so the user can skim it and veto anything before the build starts. Silence means go.
+- **Feed the viva**: after a module lands, add its decisions and likely interview questions to the project's interview-drill notes, so the user can be quizzed on it later.
+
+## 1. Project structure
+
+```
+CLAUDE.md                     project rules, stack, key business rules, file map
+docs/requirements.md          what and why. Freeze at v1.0, then edit only on request (new version)
+docs/specification.md         how, system level. Cites requirement sections like [R9]
+docs/adr/                     central ADRs for decisions affecting more than one module
+docs/implementation-phases.md build phases, gates, fakes, clash rules
+modules/README.md             module list, dependencies, build order, parallel rules, session protocol
+modules/contracts.md          ports, events, table ownership, conventions. Read-only in module sessions
+modules/<m#-name>/            spec_task.md, analysis.md, adr.md, then spec.md, tests.md, plan.md, tasks.md
+```
+
+Small project? Collapse to one module and skip `contracts.md` and phases. Say so and confirm.
+
+## 2. Stages and gates
+
+Order: `requirements` -> `specification` -> module split -> per module: `spec_task.md` + `analysis.md` -> `spec.md` -> `tests.md` -> `plan.md` + `tasks.md` -> implementation.
+
+- **Do not start the next file until the user confirms the previous one.** Ask with a question that offers "Final, move on" as an option.
+- `adr.md` is updated throughout, not at the end.
+- Each stage's output is checked against the previous: spec cites requirements, tests cover every spec rule, tasks cover every test.
+
+## 3. Working rules
+
+- **Ask every question with AskUserQuestion**: 2 to 4 options, the recommended one first and labelled "(Recommended)", each with a one-line consequence. Max 4 questions per call. Never list open questions as plain text.
+- **Record every decision in the relevant document right after the user answers** (module `adr.md`, plus the spec text). Decisions that touch several modules also become a central ADR.
+- If the user's answer is "other" or differs from the options, follow it. If it raises a risk (e.g. a hardcoded credential), state the risk in one line, offer a safer variant, and record whichever they choose. If they decline to answer a question, stop and wait; do not proceed on a guess.
+- **Do not invent requirements.** [masked] assumptions as "Assumption" in the document and ask.
+- Keep MVP and future phases separate.
+- Prefer free and open-source components unless the project says otherwise.
+- Write only inside the current module's folder. Do not edit frozen docs or other modules.
+
+## 4. Module sessions
+
+One session, one module, one task. Modules can run in parallel in separate sessions.
+
+**Never build a module from the planning session.** When a module's `spec_task.md` is ready, write a short paste-ready prompt into `modules/NEW-SESSION-PROMPTS.md`, show it to the user in chat, and tell them to run it in a NEW session (in the right worktree). Don't launch module builds as subagents from a long planning session: high-context sessions and 250k+ token subagent runs exhausted the user's usage limit (2026-11-23). The planning session stops after requirements, analysis, ADRs, spec and the module briefs.
+
+- Read: `CLAUDE.md`, `modules/README.md`, your `spec_task.md`, and only the cited sections of requirements/specification plus `contracts.md`.
+- Need something from another module, or a change to a shared rule? Add it under **Contract requests** in your `spec.md` and tell the user. Never edit `contracts.md`.
+- Where a dependency is not built yet, code against its port and use a stub or fake.
+
+### spec_task.md (the brief)
+Goal, scope in/out, sources (doc sections), what it provides, what it depends on, a checklist of what `spec.md` must cover, a pointer to the open decisions in `analysis.md`, definition of done. The module session may extend it.
+
+### analysis.md (the kick-off analysis, always, before any decision)
+Every module starts with this. Write it into `analysis.md` and walk the user through it in the chat; never jump straight to bare seed questions. Read the code properly first (callers, consumers in other apps, deployment and migration conventions) so every claim is backed by a file#line link.
+
+Open with a short "what the module must deliver" summary, then one section per decision topic. Each topic covers, in this order:
+1. **What the requirement wants**: plain words, citing requirement and AC IDs.
+2. **What we have today**: the current code, what it actually does (with file#line links), and any gap or bug it shows.
+3. **Possible changes**: two to four options.
+4. **Problems with each option**: risks, extra work, behaviour changes, who else has to change.
+5. **Recommendation and why**.
+6. **Consequence of the recommended change**: what behaves differently afterwards, for users, other modules and other developers.
+7. **Impact analysis**: where the change lands (files and functions), how many places depend on it (callers, routes, tests, frontend consumers, other modules), and what the change itself depends on (other modules, other developers' work, infra or config).
+8. **Question for the user**: the decision to make, with the recommended option first.
+
+Close with an impact summary table (topic, files touched, dependents, depends on) and a list of things noticed that are out of scope but worth parking. After the user answers, record each decision in `adr.md` and [masked] the topic "Decided: ADR-..." in `analysis.md`.
+
+### spec.md must cover
+Fit to the module, but normally:
+- Rules as enforceable statements (permissions, state machines, limits), each citing requirement IDs
+- Data model and constraints (tables, keys, uniqueness, indexes, ownership)
+- Flows and API endpoints with request/response shapes and error cases
+- Events and audit entries emitted or consumed
+- Ports exposed and used
+- Non-functional points (limits, lifetimes, security, performance)
+- Internal structure per the project's architecture ADR (files and what goes in each)
+- Repository queries and transaction boundaries
+- Constants (statuses, error codes with module prefix, event names)
+- Contract requests, open questions, assumptions
+
+### tests.md
+Written only after `spec.md` is final. Map every spec rule to at least one test, with level (unit, integration, e2e), setup and expected result. Include negative and boundary cases and permission checks. State what is faked.
+
+### plan.md and tasks.md
+Written after `tests.md` is confirmed. `plan.md`: approach, order, risks. `tasks.md`: states phase and branch name, then phases of small tasks, each with a checkbox, the files touched, the tests it satisfies, and a done check. A task fits one commit.
+
+## 5. Implementation (EPIC)
+
+1. **Explore**: read the module spec, tests, and existing code before touching anything.
+2. **Plan**: update `plan.md` before coding. Confirm if the plan changed materially.
+3. **Implement**: go phase by phase through `tasks.md`. Tests first where the tests file allows. Tick tasks off as they pass. Check context between phases; summarise state in `plan.md` if it is getting long.
+4. **Commit**: small commits per task or phase, **only when the user asks**. Follow any attribution rules from the harness. One worktree per module (section 5a).
+
+Before a phase is called done: its tests pass, lint/boundary checks pass, and the module's contract tests against fakes pass.
+
+## 5a. Parallel sessions and worktrees
+
+One session, one module, one worktree. Two sessions never share a working tree: their edits mix, one session's install rewrites the other's lockfile, and a pull refuses to run over uncommitted files the remote also changed. If the project says the user runs commands, hand them the commands below (one per block) instead of running them.
+
+**Once per repo:** `git config pull.rebase true` and `git config rebase.autoStash true`, so a pull stashes, rebases and restores local edits instead of aborting. In VS Code also set `"git.autoStash": true`.
+
+**Starting a module session:**
+1. Check `git worktree list` and `git status`. If another session or task already has uncommitted work in this checkout, propose a worktree before touching code.
+2. Create it from the latest main. Preferred: start the session with `claude --worktree <module>` (or `-w`), or ask a running session to "work in a worktree"; Claude Code puts it in `.claude/worktrees/<module>/` on branch `worktree-<module>`, and `.claude/worktrees/` must be in `.gitignore`. Plain git works too: `git fetch origin`, then `git worktree add ../<repo>-<module> -b wt/<module> origin/main`. Record the worktree path and branch in `tasks.md`.
+3. Bootstrap it: install dependencies; list git-ignored files the app needs (such as `.env`) in a `.worktreeinclude` file at the repo root (`.gitignore` syntax) so Claude Code copies them in, or copy them by hand for a plain-git worktree, and never stage them; use a different dev-server port; never run migrations from two worktrees against the same shared database.
+4. Git-ignored spec folders (for example `.sdd/`) do not exist in a new worktree. Keep one copy in the main checkout and read and write it by absolute path from every session.
+5. Tell the user which folder to open for the session.
+
+**While working:**
+- Commit a dependency change (manifest plus lockfile) as its own small commit as soon as the user approves it. These files collide most often, with other sessions and with release bots that bump versions.
+- Shared files (`contracts.md`, root config, lockfiles, migration numbering) are edited by one session at a time; the others raise a contract request.
+- Sync often: `git pull --rebase origin main` inside the worktree.
+
+**Landing the work** (only when the user asks to commit or push):
+- Trunk-based projects (all work on main): rebase onto `origin/main`, run the verify command, then `git push origin HEAD:main`. The worktree branch stays local.
+- Branch-based projects: push the branch and open a PR.
+
+**Cleanup:** once the work is on main, remove the worktree. Claude Code offers to on session exit; for plain git, `git worktree remove <path>` and `git branch -d <branch>`. `git worktree prune` clears stale entries. Start with two or three parallel sessions and add more only while review keeps up.
+
+## 6. Architecture defaults (only if the project has none)
+
+Propose a modular monolith with layers routes -> service -> repository -> schema; modules talk only through ports and events, never another module's tables; transactions begin in the service; boundaries enforced by a lint rule in CI. Record the choice as an ADR before the first module spec.
+
+## 7. ADR format
+
+`### ADR-<MODULE>-NNN: Title` with Status (Proposed/Accepted/Superseded), Date, Context, Decision, Consequences. Newest last. Central ADRs live in `docs/adr/ADR-NNNN-title.md`.
+
+## 8. Starting a new project
+
+Ask (AskUserQuestion): problem and users, MVP vs later, stack, hosting, free/open-source constraint, how many modules. Then draft `CLAUDE.md`, `docs/requirements.md` (with actors, scope, rules, assumptions, decided items), and stop for review. Freeze it at v1.0 on confirmation. Continue to the specification, then the module split, then `contracts.md`.
+
+[CLAUDE] I'll start with the orient step: check which project files already exist and read the base requirements.
+
+[TOOL] Glob {"pattern": "**/*"}
+
+[TOOL] Read {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\baseReq.md"}
+
+[RESULT] notes\2026-09-01-quote-portal-kickoff.md
+notes\2026-09-02-standup.md
+notes\2026-09-03-billing-migration-sync.md
+notes\2026-09-08-quote-portal-weekly.md
+notes\2026-09-09-notes-final-v2.md
+notes\2026-09-09-qa-standup.md
+notes\2026-09-10-acme-renewal-prep.md
+notes\2026-09-14-onboarding-flow-design.md
+notes\2026-09-15-quote-portal-weekly.md
+notes\2026-09-16-standup.md
+notes\2026-09-17-billing-migration-sync.md
+notes\2026-09-18-design-review.md
+notes\2026-09-19-offsite-draft.txt
+notes\2026-09-21-incident-review.md
+notes\2026-09-22-quote-portal-weekly.md
+notes\2026-09-23-standup.md
+notes\2026-09-24-onboarding-flow-design.md
+notes\2026-09-25-qa-sync.md
+notes\2026-09-28-acme-renewal-checkin.md
+notes\2026-09-29-billing-cutover-planning.md
+notes\2026-09-30-q4-offsite.md
+notes\2026-09-30-standup.md
+notes\2026-10-01-quote-portal-weekly.md
+notes\2026-10-02-finance-sync.md
+notes\2026-10-03-sales-pipeline.md
+notes\2026-10-05-onboarding-retro.md
+notes\2026-10-06-quote-portal-weekly.md
+notes\2026-10-07-standup.md
+notes\2026-10-08-billing-go-no-go.md
+notes\2026-10-09-security-review.md
+notes\2026-10-10-sales-weekly.md
+notes\2026-10-12-billing-post-cutover.md
+notes\2026-10-13-quote-portal-weekly.md
+n ...[89 more chars cut]
+
+[RESULT] 1	Scenario
+2	
+3	
+4	Your team's meeting notes pile up as [masked]down files. Action items get lost, and follow-up emails are written late or not at all. You will build a small CLI tool, actiontrack, that reads meeting notes, tracks the action items, and drafts follow-up emails for review.
+5	
+6	
+7	What you build
+8	
+9	
+10	A CLI with four commands:
+11	
+12	
+13	1. actiontrack ingest <folder> parses every .md meeting note in the folder. Each note has
+14	   a date, attendees and free- appear as lines like - [ ]Priya to send the revised quote by Friday. The tool stores them with owner, task, due
+15	   date (resolved to a real daurce file and status.
+16	2. actiontrack list shows items. Filters: --owner, --status open|done|overdue,
+17	   --due-before <date>. Overdu
+18	3. actiontrack done <id> [masked]s an item as done.
+19	4. actiontrack followup <ownerper owner covering their openand overdue items, and creates a Gmail draft through the Gmail MCP connector. It never sends.
+20	
+21	
+22	Edge cases the tool must handl
+23	Duplicate items repeated across several meetings.
+24	Items with no owner or no da
+25	Two people with the same first name.
+26	Malformed notes (skip them and report, don't crash).
+27	A samp ...[110 more chars cut]
+
+[CLAUDE] The base requirements file looks truncated in several places (lines cut mid-sentence). I'll sample the notes to see the real format before asking anything.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test/notes\" && wc -c * | sort -n | tail -8; echo ----; cat 2026-09-01-quote-portal-kickoff.md; echo ----; cat 2026-09-09-notes-final-v2.md | head -40; echo ----; cat scratch.md | head -20; echo ----; cat untitled.md | head -20; echo; ls -la \"c:/Users/[user]/Documents/Practitoner-test\"", "description": "Sample note files and s
+
+[RESULT]   544 2026-09-03-billing-migration-sync.md
+  552 2026-09-29-billing-cutover-planning.md
+  575 2026-09-01-quote-portal-kickoff.md
+  767 2026-09-21-incident-review.md
+  942 2026-09-18-design-review.md
+ 1076 2026-10-09-security-review.md
+ 1685 2026-09-30-q4-offsite.md
+16690 total
+----
+# Meeting: Quote portal kickoff
+Date: 2026-09-01
+Attendees: Priya Nair, Rahul Mehta, Anita Desai, Sam Okafor
+
+## Discussion
+We agreed to rebuild the quote portal in phases, starting with the customer-facing quote view. Acme is waiting on a revised quote and is our reference customer for the pilot. Cloud spend for staging still needs sign-off.
+
+## Action items
+- [ ] Priya to send the revised quote to Acme by Friday
+- [ ] Rahul to set up the staging environment by 2026-09-08
+- [ ] Anita to share first wireframes by Thursday
+- [ ] Sam to confirm cloud budget with finance
+----
+----
+ ��# Meeting  Date: �(
+�PNG
+
+�����������������������������������������������������������������������ǀ����������������������������������������������������������������������ǀ�����������������������������������������������������������������������----
+- [ ] Sam to chase the vendor
+- [ ] Priya to send the slides by Friday
+
+no heade ...[270 more chars cut]
+
+[TOOL] AskUserQuestion {"questions": [{"question": "How should we structure the SDD files for this small 30-minute project?", "header": "Structure", "multiSelect": false, "options": [{"label": "Collapsed, one module (Recommended)", "description": "Single 'actiontrack' module, no contracts.md or phases file; fastest and fits 30 minutes."}, {"label": "Full structure", "description": "Several modules (parser, store, CLI, e
+
+[RESULT] The user answered: "How should we structure the SDD files for this small 30-minute project?"="Collapsed, one module (Recommended)", "Which stack should actiontrack use?"="Python + SQLite (Recommended)", "baseReq.md is truncated (note format, stored fields, overdue rule, followup argument, edge-case list are cut off). How do we proceed?"="Infer + [masked] Assumptions (Recommended)", "How should the SDD files be logged and committed? The folder isn't a git repo yet, and your global rule says commit only when you ask."="you can do everything yourself here, no need for asking me regarding the commits, for the commit format, you can follow the one in the aisdlc skill or you can use your own ". Read the answers carefully — they may request clarification, changes, or that you not proceed — and follow what they actually say.
+
+[CLAUDE] You've authorized me to handle the commits and told me to use the commit format from the ai-sdlc skill. I'll read that skill first.
+
+[TOOL] Glob {"pattern": "C:/Users/[user]/.claude/skills/ai-sdlc/**/*"}
+
+[RESULT] C:\Users\[user]\.claude\skills\ai-sdlc\references\playbook.md
+C:\Users\[user]\.claude\skills\ai-sdlc\templates\REVIEW.md
+C:\Users\[user]\.claude\skills\ai-sdlc\templates\analysis.md
+C:\Users\[user]\.claude\skills\ai-sdlc\templates\intent.md
+C:\Users\[user]\.claude\skills\ai-sdlc\templates\testing.md
+C:\Users\[user]\.claude\skills\ai-sdlc\templates\traceability.md
+C:\Users\[user]\.claude\skills\ai-sdlc\SKILL.md
+
+[TOOL] Grep {"pattern": "commit", "path": "C:/Users/[user]/.claude/skills/ai-sdlc", "-i": true, "output_mode": "content", "-C": 3}
+
+[RESULT] <persisted-output>
+Output too large (20.2KB). Full output saved to: C:\Users\[user]\.claude\projects\c--Users-[masked]-Admin-Documents-Practitoner-test\18e48f97-8612-4533-a57a-59c2a92df9ff\tool-results\toolu_016yBVTFwrMvaDE4zKnpLxTU.txt
+
+Preview (first 2KB):
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-1----
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-2-name: ai-sdlc
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md:3:[Omitted long matching line]
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-4----
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-5-
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-6-# AI-native SDLC
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-7-
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md-8-Three sources, merged:
+C:\Users\[user]\[masked]\Flashcards\.claude\skills\ai-sdlc\SKILL.md:9:- **sdd-epic** (the user's own): specs come first, each file is confirmed before the next starts, every module begins with an analysis, and the build follows  ...[1016 more chars cut]
+
+[TOOL] Grep {"pattern": "commit (message|format|prefix|title)|conventional|Co-Authored|\\[(intent|analysis|spec)\\]|^#+ .*[Cc]ommit", "path": "C:/Users/[user]/.claude/skills/ai-sdlc/SKILL.md", "-i": true, "output_mode": "content", "-C": 4}
+
+[RESULT] No matches found
+
+[TOOL] Read {"file_path": "C:/Users/[user]/.claude/skills/ai-sdlc/SKILL.md"}
+
+[RESULT] 1	---
+2	name: ai-sdlc
+3	description: AI-native software development lifecycle, merging the user's sdd-epic workflow (gated, spec-first, module-by-module) with Anthropic's AI-native SDLC playbook (intent → spec → plan → build → test → review → deploy → maintain, each stage committing a file the next reads) and HMT's heavy-testing method (user-written rules as independent oracles, a test strategy per method, mutation testing, deterministic simulation, budgets that fail the build, a feature gate). Use when starting, continuing or structuring a project spec-first: "new project", "ai-sdlc", "SDLC", "spec-driven", "SDD", "EPIC", "write the intent", "requirements", "write the spec", "next module", "plan this module", "set up review", "set up hooks". Preferred over sdd-epic for new projects.
+4	---
+5	
+6	# AI-native SDLC
+7	
+8	Three sources, merged:
+9	- **sdd-epic** (the user's own): specs come first, each file is confirmed before the next starts, every module begins with an analysis, and the build follows Explore, Plan, Implement, Commit.
+10	- **Anthropic's AI-native SDLC playbook** (Louis Claxton, 2026-08-21, https://claude.com/resources/articles/the-ai-native-sdlc-playbook; summary in `ref ...[23917 more chars cut]
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git init -q -b main 2>&1; git config --global core.excludesFile; date '+%Y-%m-%d %H:%M:%S'; git config user.name >/dev/null || echo \"no user.name\"; git config user.email >/dev/null || echo \"no user.email\"; python --version 2>&1; cd notes; for f in *; do echo \"=== $f ($(wc -c <\"$f\") bytes)\"; if file \"$f\" | grep -qi t
+
+[RESULT] ~/.gitignore_global
+2026-11-24 16:19:46
+Python 3.13.15
+=== 2026-09-01-quote-portal-kickoff.md (575 bytes)
+# Meeting: Quote portal kickoff
+Date: 2026-09-01
+Attendees: Priya Nair, Rahul Mehta, Anita Desai, Sam Okafor
+
+## Discussion
+We agreed to rebuild the quote portal in phases, starting with the customer-facing quote view. Acme is waiting on a revised quote and is our reference customer for the pilot. Cloud spend for staging still needs sign-off.
+
+## Action items
+- [ ] Priya to send the revised quote to Acme by Friday
+- [ ] Rahul to set up the staging environment by 2026-09-08
+- [ ] Anita to share first wireframes by Thursday
+- [ ] Sam to confirm cloud budget with finance
+=== 2026-09-02-standup.md (290 bytes)
+# Meeting: Team standup
+Date: 2026-09-02
+Attendees: Rahul Mehta, Sam Okafor, Anita Desai
+
+## Discussion
+Quick round. Rahul is blocked on repo access. Sam has a VPN guide half written.
+
+## Action items
+- [ ] Rahul to open the repo access request by tomorrow
+- [ ] Sam to share the VPN guide
+=== 2026-09-03-billing-migration-sync.md (544 bytes)
+# Meeting: Billing migration sync
+Date: 2026-09-03
+Attendees: Karan Joshi, Sam Okafor, Rahul Verma, Priya Shah
+
+## Discussion
+The invoice ...[16978 more chars cut]
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\.gitignore", "content": "# Python\n__pycache__/\n*.pyc\n.venv/\n.[masked]_cache/\n\n# actiontrack local data store (generated)\n*.db\n*.sqlite3\n\n# Secrets / env: never committed\n.env\n.env.*\n!.env.example\n*.pem\n*.key\n\n# Claude Code local state\n.claude/worktrees/\n.claude/settings.local.json\n"}
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "content": "# SDD log\n\nRunning log of the spec-driven (sdd-epic) run for **actiontrack**. One row per stage event. Newest last. Committed with the rest of the SDD files.\n\n**Time box:** 30 minutes. Clock started 2026-11-24 16:14 (project folder created); target finish 16:44.\n\n## Decisions on how we work (
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\.gitignore (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md (file state is current in your context — no need to Read it back)
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "content": "# actiontrack: Requirements\n\n**Version:** v0.9 DRAFT (freezes at v1.0 on user confirmation)\n**Date:** 2026-11-24\n**Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and [masked]ed **Assumption**)\n\n## 1. Problem\n\nTeam meeting notes pile up as [masked]down files. Action items g
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\CLAUDE.md", "content": "# actiontrack\n\nCLI that reads [masked]down meeting notes, tracks action items in SQLite, and drafts follow-up emails (Gmail draft via MCP, never sent). Built spec-first with the `sdd-epic` workflow as a 30-minute evaluation.\n\n## Stack and commands\n- Python 3.13, standard library at runtime (argparse, sql
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\CLAUDE.md (file state is current in your context — no need to Read it back)
+
+[CLAUDE] I'm committing the scaffold and the source material now, without the requirements draft, which you haven't reviewed. First I'll check the staged list, as your global rule requires.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && date '+%H:%M' && git add .gitignore docs/baseReq.md docs/sdd-log.md notes && git diff --cached --name-only | head -50 && echo \"--- secret scan:\" && (git diff --cached | grep -iE \"password|api[_-]?key|secret|token|BEGIN .*PRIVATE\" | head -5 || true)", "description": "Stage scaffold and inputs, check staged list"}
+
+[RESULT] 16:21
+warning: in the working copy of '.gitignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/sdd-log.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-01-quote-portal-kickoff.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-02-standup.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-03-billing-migration-sync.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-08-quote-portal-weekly.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-09-qa-standup.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-10-acme-renewal-prep.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-14-onboarding-flow-design.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'notes/2026-09-15-quote-portal-weekly.md',  ...[4861 more chars cut]
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git config core.autocrlf false && git config pull.rebase true && git config rebase.autoStash true && git reset -q && git add .gitignore docs/baseReq.md docs/sdd-log.md notes && git diff --cached --name-only | wc -l && git commit -q -F - <<'EOF'\nchore(sdd): scaffold repo, add base brief and sample notes\n\n- git init, .gitign
+
+[RESULT] 39
+ce7a5bf chore(sdd): scaffold repo, add base brief and sample notes
+?? CLAUDE.md
+?? docs/requirements.md
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Is docs/requirements.md (v0.9, with assumptions A-1 to A-10) final so I can freeze it at v1.0, commit it, and start the specification?", "header": "Req gate", "multiSelect": false, "options": [{"label": "Final, move on (Recommended)", "description": "Freeze v1.0, commit requirements + CLAUDE.md, start specification.md; you can still veto an assumption later by asking f
+
+[RESULT] Your questions have been answered: "Is docs/requirements.md (v0.9, with assumptions A-1 to A-10) final so I can freeze it at v1.0, commit it, and start the specification?"="Change some assumptions", "A-10: an undated note (2026-10-03-sales-pipeline.md says 'sometime last week') currently drops its items. Keep that?"="Skip whole note, report it (Recommended)". You can now continue with these answers in mind.
+
+[CLAUDE] Understood. No org names in any file, commit message or commit metadata. I committed a mention already, so I'll audit the files and the git history now.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && echo \"--- files:\" && grep -rniE \"stessa|[masked]|[masked]|[masked]\" --exclude-dir=.git . ; echo \"--- history:\" && git log --format='%an <%ae> | %cn <%ce>%n%B' | grep -niE \"stessa|[masked]|[masked]|[masked]|@\" ; echo \"--- blobs in history:\" && git grep -niE \"stessa|[masked]|[masked]|[masked]\" $(git rev-list --all) -- . | head; echo \"-
+
+[RESULT] --- files:
+./docs/sdd-log.md:15:| W-5 | Autopilot is off (not Stessa work): every SDD file waits for user confirmation before the next starts | sdd-epic skill |
+--- history:
+1:[masked] [masked] <[email masked]> | [masked] [masked] <[email masked]>
+10:Co-Authored-By: Claude Sonnet 5.5 <[email masked]>
+--- blobs in history:
+ce7a5bf483e7859ababae22d0e9e69bd617641ba:docs/sdd-log.md:15:| W-5 | Autopilot is off (not Stessa work): every SDD file waits for user confirmation before the next starts | sdd-epic skill |
+--- local identity:
+(global set? yes)
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "old_string": "| W-5 | Autopilot is off (not Stessa work): every SDD file waits for user confirmation before the next starts | sdd-epic skill |", "new_string": "| W-5 | Full gates: every SDD file waits for user confirmation before the next starts | sdd-epic skill |\n| W-6 | No organisatio
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\CLAUDE.md", "old_string": "## Business rules (see requirements.md)", "new_string": "## No org or personal details (hard rule)\n- No organisation, employer, client or personal names, emails or paths may appear in any file, log, ADR, test or commit message. This run is also a leak check.\n- Git identity for t
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git config --local user.name \"actiontrack-dev\" && git config --local user.email \"[email masked]\" && git add docs/sdd-log.md && git commit -q --amend --reset-author -F - <<'EOF'\nchore(sdd): scaffold repo, add base brief and sample notes\n\n- git init, .gitignore (env/keys/db excluded), docs/sdd-log.md run log\n- docs
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\CLAUDE.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] --- files:
+--- history:
+actiontrack-dev <[email masked]> | actiontrack-dev <[email masked]>
+f571a9c chore(sdd): scaffold repo, add base brief and sample notes
+?? CLAUDE.md
+?? docs/requirements.md
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Which assumptions in docs/requirements.md should change? (Pick all that apply, or use Other to describe the change.)", "header": "Assumptions", "multiSelect": true, "options": [{"label": "A-6 bare weekday", "description": "Currently 'by Friday' = first Friday strictly after the meeting date; alternative is 'on or after' (same-day counts), which changes due dates for Fr
+
+[RESULT] Your questions have been answered: "Which assumptions in docs/requirements.md should change? (Pick all that apply, or use Other to describe the change.)"="A-6 bare weekday, A-9 overdue / no due date, A-3 / A-4 / A-5 owners". You can now continue with these answers in mind.
+
+[CLAUDE] You didn't give the new values, so I'm asking one question per assumption. In each, the first option is the alternative to the current text.
+
+[TOOL] AskUserQuestion {"questions": [{"question": "A-6: how should a bare weekday like 'by Friday' resolve?", "header": "A-6 weekday", "multiSelect": false, "options": [{"label": "On or after meeting date (Recommended)", "description": "A Friday meeting saying 'by Friday' means that same day; every other weekday resolves to the next one coming up."}, {"label": "Strictly after meeting date (current)", "description": "A 
+
+[RESULT] Your questions have been answered: "A-6: how should a bare weekday like 'by Friday' resolve?"="On or after meeting date (Recommended)", "A-9: what happens to an open item with no due date?"="Overdue 7 days after meeting (Recommended)", "A-3/A-4/A-5: which owner rules change? (Pick all that apply; unpicked ones stay as written.)"="A-4 'Everyone' = every attendee". You can now continue with these answers in mind.
+
+[CLAUDE] I'll apply the three changes to the requirements. Each one needs a small follow-on rule, which I'm [masked]ing as an Assumption.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "- AC-4.3 A bare weekday means the first such weekday **strictly after** the meeting date. (**Assumption A-6**)", "new_string": "- AC-4.3 A bare weekday means the first such weekday **on or after** the meeting date: a Friday meeting saying \"by Friday\" means that same 
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "- AC-4.5 Vague or missing due dates (`mid-October`, none) are stored as no due date and listed in the ingest report. (**Assumption A-7**: `mid-October` and similar stay unresolved rather than guessed.)", "new_string": "- AC-4.5 Vague or missing due dates (`mid-October`
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "- AC-6.2 **Overdue** = open, with a due date earlier than today. Done items are never overdue. Items with no due date are never overdue. (**Assumption A-9**)", "new_string": "- AC-6.2 **Overdue** = open, with an effective due date earlier than today. The effective due 
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "- AC-3.5 Group or placeholder owners (`Everyone`, `Someone`, `TBD`, `Team`) mean no owner: stored unassigned. (**Assumption A-4**)", "new_string": "- AC-3.5 `Everyone` creates one item per attendee of that meeting (each deduplicated per FR-5). If the note has no attend
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "**Version:** v0.9 DRAFT (freezes at v1.0 on user confirmation)", "new_string": "**Version:** v0.9 DRAFT, revision 2 (freezes at v1.0 on user confirmation)"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "| 2026-11-24 | Gaps in `baseReq.md` inferred and [masked]ed Assumption | User |", "new_string": "| 2026-11-24 | Gaps in `baseReq.md` inferred and [masked]ed Assumption | User |\n| 2026-11-24 | A-6: bare weekday resolves on or after the meeting date | User |\n| 2026-11-24 | A-9
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "Listed inline above. The ones with the most behavioural weight: **A-6** (bare weekday = next such day after the meeting), **A-8** (duplicate = same owner + normalised task), **A-9** (no due date is never overdue), **A-10** (undated note is skipped whole).", "new_string
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "old_string": "| 16:2x | Requirements | `docs/requirements.md` | v0.9 draft written, awaiting user confirmation |", "new_string": "| 16:22 | Requirements | `docs/requirements.md` | v0.9 draft written, sent for confirmation |\n| 16:25 | Privacy | repo + git history | User rule W-6: no org 
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Requirements rev 2 now has A-6 (on or after meeting date), A-9 (no due date = meeting + 7 days, [masked]ed '(default)'), A-4 ('Everyone' = one item per attendee, 'Team'/'All' treated the same) and A-10 (skip undated note) applied. Is it final?", "header": "Req gate", "multiSelect": false, "options": [{"label": "Final, move on (Recommended)", "description": "I freeze v1.0, 
+
+[RESULT] Your questions have been answered: "Requirements rev 2 now has A-6 (on or after meeting date), A-9 (no due date = meeting + 7 days, [masked]ed '(default)'), A-4 ('Everyone' = one item per attendee, 'Team'/'All' treated the same) and A-10 (skip undated note) applied. Is it final?"="Final, move on (Recommended)". You can now continue with these answers in mind.
+
+[CLAUDE] Frozen at v1.0. I'll update the headers, run the leak scan, and commit.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\requirements.md", "old_string": "**Version:** v0.9 DRAFT, revision 2 (freezes at v1.0 on user confirmation)", "new_string": "**Version:** v1.0 FROZEN 2026-11-24. Later changes are new versions, on request only."}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "old_string": "Awaiting final confirmation |", "new_string": "User confirmed final, frozen at v1.0 |"}
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\requirements.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add CLAUDE.md docs/requirements.md docs/sdd-log.md && echo \"staged:\" && git diff --cached --name-only && echo \"leak scan:\" && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]|@[a-z0-9-]+\\.(com|io|org)\" || echo \"none\") && git commit -q -F - <<'EOF'\ndocs(sdd): requirements v1.0 frozen, add CLAUDE.md\n\n-
+
+[RESULT] staged:
+CLAUDE.md
+docs/requirements.md
+docs/sdd-log.md
+leak scan:
+26:+- Trailer: `Co-Authored-By: Claude Sonnet 5.5 <[email masked]>`.
+04be0e8 actiontrack-dev docs(sdd): requirements v1.0 frozen, add CLAUDE.md
+f571a9c actiontrack-dev chore(sdd): scaffold repo, add base brief and sample notes
+16:29
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\specification.md", "content": "# actiontrack: System specification\n\n**Version:** v0.9 DRAFT\n**Date:** 2026-11-24\n**Cites:** `docs/requirements.md` v1.0 (FR-x, AC-x.y, NFR-x)\n\n## 1. Architecture (ADR-0001, Accepted by default per sdd-epic section 6)\n\nSingle module, layered: `cli` -> `service` -> `store` (SQLite), wi
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\docs\specification.md (file state is current in your context — no need to Read it back)
+
+[CLAUDE] I left a muddled sentence in section 4, so I'm fixing it. I'm also adding `drafts/` to `.gitignore` for S-2.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\specification.md", "old_string": "Ambiguous owners keep the first name as the stored owner and `owner_status = ambiguous`. They are never matched by `followup` unless the user passes the same first name and there is exactly one person... no: they are listed under `list --owner <first>` only as \"ambig
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\.gitignore", "old_string": "*.sqlite3", "new_string": "*.sqlite3\ndrafts/"}
+
+[TOOL] AskUserQuestion {"questions": [{"question": "OQ-1: how should followup create the Gmail draft? (This is the hardest-to-reverse choice: it fixes the port and what the tool depends on.)", "header": "Gmail draft", "multiSelect": false, "options": [{"label": "A. Port + file sink + claude CLI sink (Recommended)", "description": "Always writes a draft file; optionally runs claude headless restricted to the Gmail create
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\specification.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\.gitignore has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] Your questions have been answered: "OQ-1: how should followup create the Gmail draft? (This is the hardest-to-reverse choice: it fixes the port and what the tool depends on.)"="A. Port + file sink + claude CLI sink (Recommended)", "Is docs/specification.md (v0.9) final? Given 30 minutes (about 13 left), I also propose merging the remaining per-module steps (analysis, spec, tests, plan) into one 'actiontrack' module file set kept short."="Final, move on, keep module files short (Recommended)". You can now continue with these answers in mind.
+
+[CLAUDE] Specification is confirmed and OQ-1 is decided as option A. I'm recording the two central ADRs, [masked]ing the spec final and committing it.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\adr\\ADR-0001-layered-single-module.md", "content": "# ADR-0001: Layered single module with pure helpers\n\n- **Status:** Accepted\n- **Date:** 2026-11-24\n\n## Context\nSmall CLI, 30-minute time box, requirements FR-1..FR-9. The riskiest logic (note parsing, due dates, owner resolution) must be testable with no database a
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\adr\\ADR-0002-draft-sink-port.md", "content": "# ADR-0002: Gmail drafts through a one-method port\n\n- **Status:** Accepted\n- **Date:** 2026-11-24\n- **Decided by:** User (option A of OQ-1)\n\n## Context\n`followup` must create a Gmail draft through the Gmail MCP connector and never send (FR-8). A Python CLI cannot call a
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\specification.md", "old_string": "**Version:** v0.9 DRAFT", "new_string": "**Version:** v1.0 FINAL (confirmed 2026-11-24). OQ-1 decided: option A, see `docs/adr/ADR-0002-draft-sink-port.md`."}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "old_string": "User confirmed final, frozen at v1.0 |", "new_string": "User confirmed final, frozen at v1.0 |\n| 16:34 | Specification | `docs/specification.md`, `docs/adr/ADR-0001`, `ADR-0002` | Spec written and confirmed. OQ-1 decided: option A (port + file sink + claude CLI sink). User
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\docs\adr\ADR-0001-layered-single-module.md (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\docs\adr\ADR-0002-draft-sink-port.md (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\specification.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add .gitignore docs && echo \"staged:\" && git diff --cached --name-only && echo \"leak scan:\" && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"none\") && git commit -q -F - <<'EOF'\ndocs(sdd): specification v1.0, ADR-0001 layering, ADR-0002 draft port\n\n- docs/specification.md: components, two
+
+[RESULT] staged:
+.gitignore
+docs/adr/ADR-0001-layered-single-module.md
+docs/adr/ADR-0002-draft-sink-port.md
+docs/sdd-log.md
+docs/specification.md
+leak scan:
+none
+9fb0523 actiontrack-dev docs(sdd): specification v1.0, ADR-0001 layering, ADR-0002 draft port
+04be0e8 actiontrack-dev docs(sdd): requirements v1.0 frozen, add CLAUDE.md
+f571a9c actiontrack-dev chore(sdd): scaffold repo, add base brief and sample notes
+16:33
+
+[CLAUDE] The specification is committed as `9fb0523`. This is the module kick-off: a short brief and analysis, with two decisions that are genuinely open and nothing else.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\spec_task.md", "content": "# Module brief: actiontrack\n\n## Goal\nDeliver the four CLI commands (`ingest`, `list`, `done`, `followup`) over the sample `notes/` folder, per `docs/requirements.md` v1.0 and `docs/specification.md` v1.0.\n\n## Scope\n**In:** everything in FR-1..FR-9 and NFR-1..NFR-7. **Out:** 
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\analysis.md", "content": "# Kick-off analysis: actiontrack\n\nGreenfield: no existing code. Every claim below is backed by a sample note under `notes/` (the only real input) or a requirement.\n\n## What the module must deliver\nParse the 34 sample files into tracked items with resolved owners and due dates,
+
+[TOOL] AskUserQuestion {"questions": [{"question": "T1: how should duplicate action items be matched across meetings?", "header": "T1 dedup", "multiSelect": false, "options": [{"label": "Normalised text match (Recommended)", "description": "Lower-case, drop punctuation and a/an/the, collapse spaces, ignore trailing due phrase; never merges different tasks, misses reworded repeats."}, {"label": "Exact text match", "descr
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\spec_task.md (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\analysis.md (file state is current in your context — no need to Read it back)
+
+[RESULT] Your questions have been answered: "T1: how should duplicate action items be matched across meetings?"="Normalised text match (Recommended)", "T2: how should 'next Tuesday', 'end of next week', 'end of month' resolve?"="Following calendar week (Recommended)", "Are modules/actiontrack/spec_task.md and analysis.md okay to commit, with your T1/T2 answers recorded in adr.md? (~10 minutes left in the time box.)"="Final, move on to spec.md (Recommended)". You can now continue with these answers in mind.
+
+[CLAUDE] Both decisions go into the module ADR and the analysis is [masked]ed decided. Then I'll commit and move to `spec.md`.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\adr.md", "content": "# Module ADRs: actiontrack\n\nCentral ADRs: `docs/adr/ADR-0001`, `ADR-0002`. Newest last.\n\n### ADR-ACTIONTRACK-001: Duplicate items match on normalised text\n- **Status:** Accepted\n- **Date:** 2026-11-24\n- **Decided by:** User (analysis T1, recommended option)\n- **Context:** The sa
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\analysis.md", "old_string": "## T1: What counts as \"the same item\" (AC-5.1, A-8)", "new_string": "## T1: What counts as \"the same item\" (AC-5.1, A-8). Decided: ADR-ACTIONTRACK-001"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\analysis.md", "old_string": "## T2: Relative due phrases beyond \"by Friday\" (AC-4.2)", "new_string": "## T2: Relative due phrases beyond \"by Friday\" (AC-4.2). Decided: ADR-ACTIONTRACK-002"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\docs\\sdd-log.md", "old_string": "User chose short module files to fit the time box |", "new_string": "User chose short module files to fit the time box |\n| 16:37 | Module brief | `modules/actiontrack/{spec_task,analysis,adr}.md` | T1 dedup = normalised text (ADR-ACTIONTRACK-001); T2 next/end-of phrases = 
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add modules docs && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan: none\") && git commit -q -F - <<'EOF'\ndocs(sdd): actiontrack module brief, analysis and ADRs\n\n- modules/actiontrack/spec_task.md, analysis.md (topics T1, T2), adr.md\n- ADR-ACTIONTRACK
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\adr.md (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\analysis.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\analysis.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\docs\sdd-log.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] docs/sdd-log.md
+modules/actiontrack/adr.md
+modules/actiontrack/analysis.md
+modules/actiontrack/spec_task.md
+leak scan: none
+c0184ed actiontrack-dev docs(sdd): actiontrack module brief, analysis and ADRs
+9fb0523 actiontrack-dev docs(sdd): specification v1.0, ADR-0001 layering, ADR-0002 draft port
+16:34
+
+[CLAUDE] Understood, I'll keep it tight. Here is the module `spec.md`, kept to what the system spec doesn't already say.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\spec.md", "content": "# actiontrack module spec\n\n**Version:** v0.9 DRAFT. Cites `docs/requirements.md` v1.0, `docs/specification.md` v1.0 (table DDL and flows live there), ADR-0001, ADR-0002, ADR-ACTIONTRACK-001/002.\n\n## 1. Rules (each testable; ids are used by tests.md)\n\n| Rule | Statement | Cites |\
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Is modules/actiontrack/spec.md (rules R1-R19, due-phrase table, CLI shapes, exit codes) final so I can commit it and write tests.md?", "header": "Spec gate", "multiSelect": false, "options": [{"label": "Final, move on (Recommended)", "description": "Commit spec.md, then write tests.md mapping every rule R1-R19 and every AC to a test."}, {"label": "Changes needed", "des
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\spec.md (file state is current in your context — no need to Read it back)
+
+[RESULT] Your questions have been answered: "Is modules/actiontrack/spec.md (rules R1-R19, due-phrase table, CLI shapes, exit codes) final so I can commit it and write tests.md?"="Final, move on (Recommended)". You can now continue with these answers in mind.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && sed -i 's/^\\*\\*Version:\\*\\* v0.9 DRAFT\\. Cites/**Version:** v1.0 FINAL (2026-11-24). Cites/' modules/actiontrack/spec.md && printf '%s\\n' '| 16:40 | Module spec | `modules/actiontrack/spec.md` | Rules R1-R19, due table, CLI shapes, exit codes. Confirmed final |' >> docs/sdd-log.md && git add modules/actiontrack/spec.md 
+
+[RESULT] docs/sdd-log.md
+modules/actiontrack/spec.md
+leak scan: none
+1970e33 actiontrack-dev docs(sdd): actiontrack module spec v1.0
+16:36
+[This command modified 2 files you've previously read: docs\sdd-log.md, modules\actiontrack\spec.md. Call Read before editing.]
+
+[CLAUDE] The log timestamp I wrote for the spec row (16:40) is ahead of the real clock (16:36), so I'll correct it. Then I'm writing `tests.md`, mapping every rule and AC to a test.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && sed -i 's/^| 16:40 | Module spec/| 16:36 | Module spec/; s/^| 16:37 | Module brief/| 16:33 | Module brief/; s/^| 16:34 | Specification/| 16:31 | Specification/' docs/sdd-log.md && grep -n \"^| 16\" docs/sdd-log.md | cut -c1-60", "description": "Correct log timestamps"}
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\tests.md", "content": "# actiontrack tests\n\n**Version:** v0.9 DRAFT. Written from `spec.md` v1.0. Verify command: `python -m [masked]` (NFR-7).\n\n**Levels:** U = unit (pure function, no I/O), I = integration (real SQLite in a temp dir, real note files in a temp dir), E = e2e (CLI via `python -m actiontrack
+
+[RESULT] 24:| 16:19 | Orient | - | No SDD structure, not a git repo. 
+25:| 16:22 | Requirements | `docs/requirements.md` | v0.9 dr
+26:| 16:25 | Privacy | repo + git history | User rule W-6: n
+27:| 16:28 | Requirements | `docs/requirements.md` | Rev 2: 
+28:| 16:31 | Specification | `docs/specification.md`, `docs/
+29:| 16:33 | Module brief | `modules/actiontrack/{spec_task,
+30:| 16:36 | Module spec | `modules/actiontrack/spec.md` | R
+[This command modified 1 file you've previously read: docs\sdd-log.md. Call Read before editing.]
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\tests.md (file state is current in your context — no need to Read it back)
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\tests.md", "old_string": "one item for Priya Nair, 3 sources, done (09-15 has `[x]`), due 2026-09-04 from 09-01 then latest meeting's due wins per AC-5.3 |", "new_string": "one item for Priya Nair, 3 sources, done (09-15 has `[x]`), due 2026-09-11 (09-08 meeting's \"by Friday\"); 09-15
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Is modules/actiontrack/tests.md (T-01..T-37, covering R1-R19 and every AC, with new assumption S-5: a repeat with no due date does not erase an earlier due date) final?", "header": "Tests gate", "multiSelect": false, "options": [{"label": "Final, move on (Recommended)", "description": "Commit tests.md, then write plan.md + tasks.md and start building test-first."}, {"l
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\tests.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] Your questions have been answered: "Is modules/actiontrack/tests.md (T-01..T-37, covering R1-R19 and every AC, with new assumption S-5: a repeat with no due date does not erase an earlier due date) final?"="Final, move on (Recommended)". You can now continue with these answers in mind.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && sed -i 's/^\\*\\*Version:\\*\\* v0.9 DRAFT\\. Written from/**Version:** v1.0 FINAL (2026-11-24). Written from/' modules/actiontrack/tests.md && printf '%s\\n' '- **Assumption S-5:** AC-5.3 \"latest meeting'\"'\"'s due wins\" means the latest meeting that states a due date; a repeat with no due date does not erase an earlier o
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\plan.md", "content": "# actiontrack plan\n\n**Version:** v0.9 DRAFT. Inputs: `spec.md` v1.0, `tests.md` v1.0, ADR-0001/0002, ADR-ACTIONTRACK-001/002.\n\n## Approach\nTest-first, bottom-up: pure helpers first (they carry the risk and need no database), then the store and ingest service, then the CLI commands
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\actiontrack\\tasks.md", "content": "# actiontrack tasks\n\n**Branch:** `main` (trunk-based, single session, no worktree). One task = one commit, `feat|test(actiontrack): <summary>`.\n\n## Phase 1: skeleton and dates\n- [ ] 1.1 Package skeleton, `pyproject.toml`-free layout, `tests/` and `conftest.py` with sample-notes f
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Are plan.md and tasks.md (7 phases, test-first, trunk on main) approved, so I commit them and start building phase 1? Note: the 30-minute [masked] is about here, so the build will run past it.", "header": "Plan gate", "multiSelect": false, "options": [{"label": "Approved, start building (Recommended)", "description": "Commit the plan, then implement phase by phase with tes
+
+[RESULT] docs/sdd-log.md
+modules/actiontrack/spec.md
+modules/actiontrack/tests.md
+leak scan: none
+27aee25 actiontrack-dev docs(sdd): actiontrack tests v1.0
+16:39
+[This command modified 3 files you've previously read: modules\actiontrack\spec.md, docs\sdd-log.md, modules\actiontrack\tests.md. Call Read before editing.]
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\plan.md (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\actiontrack\tasks.md (file state is current in your context — no need to Read it back)
+
+[RESULT] Your questions have been answered: "Are plan.md and tasks.md (7 phases, test-first, trunk on main) approved, so I commit them and start building phase 1? Note: the 30-minute [masked] is about here, so the build will run past it."="Approved, start building (Recommended)". You can now continue with these answers in mind.
+
+[CLAUDE] The plan is approved. I'll commit the plan docs, then build bottom-up, starting with the pure date logic.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && printf '%s\\n' '| 16:42 | Plan | `modules/actiontrack/plan.md`, `tasks.md` | 7 phases, test-first, trunk on main. Approved; build started |' >> docs/sdd-log.md && printf '%s\\n' '- **Assumption S-6:** `list --status open` shows every not-done item (overdue ones included, shown with status `overdue`); `--status overdue` narrow
+
+[RESULT] docs/sdd-log.md
+modules/actiontrack/plan.md
+modules/actiontrack/spec.md
+modules/actiontrack/tasks.md
+leak scan: none
+d2abc9c docs(sdd): actiontrack plan and tasks, approved
+C:\Users\[user]\AppData\Local\Programs\Python\Python313\python.exe: No module named [masked]
+
+[CLAUDE] The user wants speed. [masked] isn't installed, but it's the named dev dependency in NFR-1, so I'll install it. In parallel I'm writing the pure modules (dates, parser, owners) and their tests.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m pip install -q [masked] 2>&1 | tail -2; python -m [masked] --version", "description": "Install [masked] dev dependency"}
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\dates.py", "content": "\"\"\"Pure date helpers: due-phrase resolution (spec section 2) and header dates.\"\"\"\nfrom __future__ import annotations\n\nimport re\nfrom datetime import date, timedelta\n\nWEEKDAYS = {\n    \"mon\": 0, \"monday\": 0, \"tue\": 1, \"tues\": 1, \"tuesday\": 1,\n    \"wed\": 2, \"wednesday\"
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\__init__.py", "content": "\"\"\"actiontrack: track action items from [masked]down meeting notes.\"\"\"\n"}
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_dates.py", "content": "from datetime import date\n\nimport [masked]\n\nfrom actiontrack.dates import effective_due, parse_header_date, resolve_due, split_due\n\nMON = date(2026, 10, 5)   # Monday\nFRI = date(2026, 9, 4)    # Friday\nTHU = date(2026, 9, 3)    # Thursday\n\n\[email masked](\"phrase,meeting,exp
+
+[RESULT] [notice] A new release of pip is available: 26.2.1 -> 26.3
+[notice] To update, run: python.exe -m pip install --upgrade pip
+[masked] 9.2.0
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\dates.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\__init__.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_dates.py (file state is current in your context — no need to Read it back)
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q tests/test_dates.py 2>&1 | tail -25", "description": "Run date tests"}
+
+[RESULT] .........................                                                [100%]
+25 passed in 0.27s
+
+[CLAUDE] Dates are green with 25 passing tests. Next I'm committing them and writing the parser and the owner resolver.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && printf '__pycache__/\\n' > /dev/null && git add actiontrack/__init__.py actiontrack/dates.py tests/test_dates.py && git diff --cached --name-only && git commit -q -F - <<'EOF'\nfeat(actiontrack): due-phrase resolution (tasks 1.1, 1.2)\n\n- dates.py: resolve_due, split_due, parse_header_date, effective_due\n- A-6 weekday on or
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\parser.py", "content": "\"\"\"Pure note parser: bytes -> Note | Malformed (spec R4-R9, R12).\"\"\"\nfrom __future__ import annotations\n\nimport re\nfrom dataclasses import dataclass, field\nfrom datetime import date\n\nfrom .dates import parse_header_date, resolve_due, split_due\n\n\n@dataclass\nclass RawItem:\n   
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\owners.py", "content": "\"\"\"Pure owner resolution (spec section 4, R9-R11).\"\"\"\nfrom __future__ import annotations\n\nimport re\nfrom dataclasses import dataclass\n\nRESOLVED, AMBIGUOUS, UNASSIGNED = \"resolved\", \"ambiguous\", \"unassigned\"\nEXPAND = {\"everyone\", \"team\", \"all\"}\nNO_OWNER = {\"someone\"
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_parser.py", "content": "from datetime import date\n\nfrom actiontrack.parser import Malformed, Note, parse_note\n\nHDR = \"# Meeting: X\\nDate: 2026-09-14\\nAttendees: Anita Desai, Priya Shah\\n\\n## Action items\\n\"\n\n\ndef parse(text: str, name=\"n.md\"):\n    return parse_note(name, text.encode(\"utf-8\"))\n\n\n
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_owners.py", "content": "from actiontrack.owners import AMBIGUOUS, RESOLVED, UNASSIGNED, Owner, resolve_owner\n\nTWO_PRIYAS = [\"Priya Nair\", \"Priya Shah\", \"Sam Okafor\"]\nREGISTRY = {\"Priya Nair\", \"Priya Shah\", \"Rahul Mehta\", \"Rahul Verma\", \"Sam Okafor\", \"Anita Desai\"}\n\n\ndef test_forms():  # T-11\n
+
+[RESULT] actiontrack/__init__.py
+actiontrack/dates.py
+tests/test_dates.py
+9b4872a feat(actiontrack): due-phrase resolution (tasks 1.1, 1.2)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\parser.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\owners.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_parser.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_owners.py (file state is current in your context — no need to Read it back)
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\owners.py", "old_string": "            return Owner(name.title(), AMBIGUOUS)\n        if pool is attendees or pool == sorted(set(attendees)):\n            continue\n    return", "new_string": "            return Owner(name.title(), AMBIGUOUS)\n    return"}
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q 2>&1 | tail -30", "description": "Run all tests so far"}
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\owners.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] ...................................                                      [100%]
+35 passed in 0.43s
+
+[CLAUDE] All 35 tests pass. I'm committing the parser and owners, then writing the store, ingest service, draft builder, sinks and CLI.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add actiontrack/parser.py actiontrack/owners.py tests/test_parser.py tests/test_owners.py && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan: none\") && git commit -q -F - <<'EOF'\nfeat(actiontrack): note parser and owner resolution (tasks 2.1, 2.2, 3.1)\n
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\store.py", "content": "\"\"\"SQLite repository. The only module that imports sqlite3 (ADR-0001).\"\"\"\nfrom __future__ import annotations\n\nimport sqlite3\nfrom dataclasses import dataclass\nfrom datetime import date\n\nSCHEMA = \"\"\"\nCREATE TABLE IF NOT EXISTS people(full_name TEXT PRIMARY KEY);\nCREATE TABLE I
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "content": "\"\"\"Use-cases: ingest, list, done, followup (spec sections 2, 6, 7).\"\"\"\nfrom __future__ import annotations\n\nimport os\nimport re\nfrom dataclasses import dataclass, field\nfrom datetime import date\n\nfrom .dates import effective_due\nfrom .draft import Draft, build_draft\nfrom .owne
+
+[RESULT] actiontrack/owners.py
+actiontrack/parser.py
+tests/test_owners.py
+tests/test_parser.py
+leak scan: none
+0308a8d feat(actiontrack): note parser and owner resolution (tasks 2.1, 2.2, 3.1)
+16:42
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\store.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py (file state is current in your context — no need to Read it back)
+
+[CLAUDE] I left some dead placeholder lines in `service.py`, so I'm cleaning them up before moving on.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "old_string": "                owners = resolve_owner(raw.owner_raw, note.attendees, registry)\n                if raw.owner_raw is None:\n                    report.no_due  # (owner-less items are still stored; reported below)\n                for o in owners:\n                   
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "old_string": "    if raw.owner_raw is None:\n        report.ambiguous.append(f\"{note.file}: no owner ({raw.task})\") if False else None\n    if raw.due is None:", "new_string": "    if raw.due is None:"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "old_string": "            items = [i for i in items if i.owner == value or (i.owner_status == AMBIGUOUS and i.owner and\n                     i.owner.lower() == value.split()[0].lower() and False)]", "new_string": "            items = [i for i in items if i.owner == value]"}
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\draft.py", "content": "\"\"\"Pure draft builder and the DraftSink port (ADR-0002). The port has no send method.\"\"\"\nfrom __future__ import annotations\n\nfrom dataclasses import dataclass\nfrom datetime import date\nfrom typing import Protocol\n\n\n@dataclass(frozen=True)\nclass Draft:\n    owner: str\n    to: st
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\sinks.py", "content": "\"\"\"DraftSink adapters (ADR-0002). Only this module starts subprocesses. No send operation exists.\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport os\nimport re\nimport subprocess\n\nfrom .draft import Draft\n\n# Gmail connector tool allowed to the headless claude run: creat
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\cli.py", "content": "\"\"\"argparse front end: printing and exit codes only (spec section 3).\"\"\"\nfrom __future__ import annotations\n\nimport argparse\nimport os\nimport re\nimport sys\nfrom datetime import date\n\nfrom . import service\nfrom .sinks import ClaudeGmailDraftSink, FileDraftSink, SinkError\nfrom .st
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\__main__.py", "content": "import sys\n\nfrom .cli import main\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"}
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m actiontrack --db /tmp/at.db --today 2026-10-01 ingest notes; echo \"exit=$?\"; python -m actiontrack --db /tmp/at.db --today 2026-10-01 list --status overdue | head -12; rm -f /tmp/at.db", "description": "Smoke-run the CLI on sample notes"}
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\draft.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\sinks.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\cli.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\__main__.py (file state is current in your context — no need to Read it back)
+
+[RESULT] read 31 files
+skipped 2026-09-09-notes-final-v2.md: empty
+skipped 2026-10-03-sales-pipeline.md: bad-date
+skipped scratch.md: not-text
+skipped untitled.md: no-header
+added 108
+updated 23
+ambiguous owner: 2026-09-17-billing-migration-sync.md: Priya (sign off the cutover checklist)
+ambiguous owner: 2026-09-23-standup.md: Rahul (rebase the feature branch)
+ambiguous owner: 2026-09-30-q4-offsite.md: Priya (own the hiring plan for the two QA roles)
+ambiguous owner: 2026-09-30-q4-offsite.md: Rahul (prepare the architecture overview)
+ambiguous owner: 2026-10-07-standup.md: Rahul (review Anita's PR)
+ambiguous owner: 2026-10-08-billing-go-no-go.md: Priya (circulate the go/no-go summary)
+no/defaulted due: 2026-09-01-quote-portal-kickoff.md: confirm cloud budget with finance
+no/defaulted due: 2026-09-02-standup.md: share the VPN guide
+no/defaulted due: 2026-09-03-billing-migration-sync.md: snapshot the production DB before cutover
+no/defaulted due: 2026-09-08-quote-portal-weekly.md: ask Acme for their procurement contact
+no/defaulted due: 2026-09-08-quote-portal-weekly.md: set up the staging environment
+no/defaulted due: 2026-09-09-qa-standup.md: set up the test data
+no/defau ...[5065 more chars cut]
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\conftest.py", "content": "import io\nimport os\nimport sys\nfrom datetime import date\n\nimport [masked]\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n\nfrom actiontrack import cli  # noqa: E402\nfrom actiontrack.store import Store  # noqa: E402\n\nSAMPLE = os.path.join(os.path.dirname(
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_service.py", "content": "import [masked]\n\nfrom actiontrack import service\nfrom conftest import TODAY, write_note\n\nPN = [\"Priya Nair\", \"Rahul Mehta\"]\n\n\ndef test_only_md_files(tmp_path, store):  # T-01\n    write_note(tmp_path, \"a.md\", \"2026-09-01\", PN, [\"- [ ] Priya N. to do a by Friday\"])\n    (tmp_pa
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\conftest.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_service.py (file state is current in your context — no need to Read it back)
+
+[CLAUDE] I wrote a sloppy hedge assertion in the overdue test. The expected result is exactly tasks a and d: d defaults to 09-08, which is before today. I'm tightening it and running the suite.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_service.py", "old_string": "    assert [i.task for i in od] == [\"a\", \"d\"] if False else [i.task for i in od] == [\"a\"] or [i.task for i in od] == [\"a\", \"d\"]\n    assert all(i.status == \"open\" for i in od)\n    assert \"b\" not in [i.task for i in od]", "new_string": "    # d has no st
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q 2>&1 | tail -30", "description": "Run full suite"}
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\tests\test_service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] ..............................................                           [100%]
+46 passed in 1.19s
+
+[CLAUDE] The 46 tests pass. I'm committing the store, ingest and list/done logic, then writing the CLI, followup, sink and non-functional tests.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add actiontrack/store.py actiontrack/service.py actiontrack/draft.py tests/conftest.py tests/test_service.py && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan: none\") && git commit -q -F - <<'EOF'\nfeat(actiontrack): store, two-pass ingest, list and done
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_cli.py", "content": "import json\nimport os\nimport re\nimport subprocess\nimport sys\nimport time\nfrom datetime import date\n\nimport [masked]\n\nfrom actiontrack import service\nfrom actiontrack.draft import Draft, build_draft\nfrom actiontrack.sinks import ClaudeGmailDraftSink, FileDraftSink, SinkError\nfrom confte
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q 2>&1 | tail -40", "description": "Run full suite incl. CLI tests"}
+
+[RESULT] actiontrack/draft.py
+actiontrack/service.py
+actiontrack/store.py
+tests/conftest.py
+tests/test_service.py
+leak scan: none
+45dd5fe feat(actiontrack): store, two-pass ingest, list and done logic (phases 4-5)
+16:44
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_cli.py (file state is current in your context — no need to Read it back)
+
+[RESULT] .............................................................            [100%]
+61 passed in 4.07s
+
+[CLAUDE] All 61 tests pass. I'm finishing now: committing the CLI and sinks, ticking off tasks, logging, and running a final leak scan over the files and the whole history.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add actiontrack/cli.py actiontrack/sinks.py actiontrack/__main__.py tests/test_cli.py && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan (code): none\") && git commit -q -F - <<'EOF'\nfeat(actiontrack): CLI, followup, file and claude draft sinks (phases 5-
+
+[RESULT] actiontrack/__main__.py
+actiontrack/cli.py
+actiontrack/sinks.py
+tests/test_cli.py
+leak scan (code): none
+--- final audit
+files: clean
+history blobs: clean
+actiontrack-dev <[email masked]>
+messages: clean
+4a2e0eb docs(sdd): tick off tasks, log build completion
+2059976 feat(actiontrack): CLI, followup, file and claude draft sinks (phases 5-7)
+45dd5fe feat(actiontrack): store, two-pass ingest, list and done logic (phases 4-5)
+0308a8d feat(actiontrack): note parser and owner resolution (tasks 2.1, 2.2, 3.1)
+9b4872a feat(actiontrack): due-phrase resolution (tasks 1.1, 1.2)
+d2abc9c docs(sdd): actiontrack plan and tasks, approved
+27aee25 docs(sdd): actiontrack tests v1.0
+1970e33 docs(sdd): actiontrack module spec v1.0
+c0184ed docs(sdd): actiontrack module brief, analysis and ADRs
+9fb0523 docs(sdd): specification v1.0, ADR-0001 layering, ADR-0002 draft port
+04be0e8 docs(sdd): requirements v1.0 frozen, add CLAUDE.md
+f571a9c chore(sdd): scaffold repo, add base brief and sample notes
+61 passed in 2.15s
+16:45
+[This command modified 2 files you've previously read: docs\sdd-log.md, modules\actiontrack\tasks.md. Call Read before editing.]
+
+[CLAUDE] The build is done and committed. `python -m [masked]` gives 61 passed, and it finished at 16:45, about 31 minutes after the 16:14 start.
+
+**What was built**
+- `ingest`, `list`, `done` and `followup` all work from `python -m actiontrack`, with Python and SQLite.
+- Ingesting the real `notes/` folder reads 31 files and skips 4 with a reason each. Those are the empty file (`2026-09-09-notes-final-v2.md`), the binary `scratch.md`, the undated `2026-10-03-sales-pipeline.md` and the headerless `untitled.md`. The `.txt` file is ignored.
+- Six ambiguous owners are flagged, never guessed (e.g. "Priya" or "Rahul" when two people share the name).
+- Lines inside quotes, code blocks and HTML comments are not treated as items.
+- `followup` creates drafts only. No send operation exists anywhere, and a test checks this.
+
+**SDD trail:** every stage file was confirmed before the next started. It's in git as 12 commits, with decisions recorded in the ADRs and `docs/sdd-log.md`. The files are `docs/requirements.md`, `docs/specification.md`, `docs/adr/`, and `modules/actiontrack/` (spec_task, analysis, adr, spec, tests, plan, tasks).
+
+**Org-detail leak check:** after your message I found two leaks I had caused. A log line named an org, and the commit author was your real name and work email from the global git config. I fixed both, set a generic repo-local identity (`actiontrack-dev`) and rewrote that one local commit. The final audit of files, every commit's content, messages and authors is clean. I didn't touch your global git config.
+
+**Caveats**
+- **Gmail:** the live Gmail draft path is untested because the connector isn't authorised in this session. The `claude` command line is covered by a fake-runner test, and the Gmail tool name in `sinks.py` is a guess (S-3) that may need correcting once the connector is authorised.
+- **Default sink:** the default sink writes a draft JSON file to `drafts/` instead.
+- **Test files:** `tasks.md` mentions `tests/test_ingest.py`, but those tests live in `test_service.py`.
+- **[masked]:** I ran `pip install [masked]` in your Python environment, since NFR-1 names it as the test tool.
+- **Assumptions:** the open assumptions are listed in `docs/requirements.md`. S-5 and S-6 are in `modules/actiontrack/spec.md`.
+
+[USER] are we done ??
+
+[CLAUDE] Yes, for the 30-minute scope. All four commands work, `python -m [masked]` gives 61 passed, and the working tree is clean. The SDD files are committed (12 commits) and the leak audit of files, history and authors is clean.
+
+Three loose ends, none blocking:
+- **Gmail not tested live.** The connector isn't authorised in this session, so I haven't seen a real draft created. The default `--sink file` writes the draft to `drafts/` instead. The `claude` sink's Gmail tool name is a guess (S-3), to be corrected once the connector is authorised.
+- **Stale file name in `tasks.md`.** It mentions `tests/test_ingest.py`, but those tests are in `test_service.py`. I can fix that in a one-line commit.
+- **Assumptions you haven't reviewed.** S-5 (a repeat with no due date keeps the earlier one) and S-6 (`--status open` includes overdue items) were added after you approved the specs. They're listed in `modules/actiontrack/spec.md`.
+
+Tell me if you want any of these fixed or changed.
+
+[USER] is everything which was there in the basereq done ?
+
+[CLAUDE] Almost. Everything in `docs/baseReq.md` is built and tested except one part, which is built but not verified live.
+
+| Brief item | Status |
+|---|---|
+| `ingest <folder>` parses every `.md` note, stores owner, task, due date (resolved to a real date), source file and status | Done |
+| `list` with `--owner`, `--status open\|done\|overdue` and `--due-before <date>` | Done |
+| `done <id>` | Done |
+| `followup <owner>`: one email per owner covering open and overdue items | Done |
+| `followup` creates a Gmail draft through the Gmail MCP connector | Not verified live |
+| `followup` never sends | Done, and a test checks it |
+| Edge case: duplicates across meetings | Done |
+| Edge case: items with no owner or no date | Done |
+| Edge case: two people with the same first name | Done |
+| Edge case: malformed notes skipped and reported, no crash | Done |
+| Sample notes folder with 30+ files | Provided, and `ingest` runs cleanly on it |
+
+**The Gmail draft is the gap.** The default `followup` writes the draft to a JSON file in `drafts/`. The `--sink claude` option is meant to create the real Gmail draft through the connector, but I haven't run it. The connector isn't authorised in this session, and the tool name it calls is a guess. To close this, authorise the Gmail connector in your claude.ai settings. Then I can run `--sink claude` once, confirm the draft appears, and correct the tool name if it's wrong.
+
+**Parts of the brief are cut off.** `baseReq.md` is truncated, so I inferred the missing parts from the notes and [masked]ed each as an Assumption. If the full text says something different, for example about the overdue rule or the `followup` argument, some behaviour may need changing. Pasting the full brief would let me check.
+
+[USER] what is remaning, if something is there we can pick it two at a time
+
+[CLAUDE] Here is what's left, roughly by value:
+
+1. **Live Gmail draft check.** Run `--sink claude` once and confirm a draft appears. This needs you to authorise the Gmail connector first.
+2. **Due-date misses.** Some sample items fall back to "meeting + 7 days" when the date is plainly there. Examples are "for Saturday 10 Oct" and a trailing "tomorrow" with no "by". The spec's keyword rule (R12) excludes these on purpose, so fixing them means a small spec change plus tests.
+3. **Tidy-up.** Fix the stale test-file name in `tasks.md`, add a short usage section for the four commands, and cut the repeated lines in the ingest report (the same item is listed once per attendee).
+4. **Brief check.** Compare against the full `baseReq.md` if you paste it, and confirm assumptions S-5 and S-6.
+
+[TOOL] AskUserQuestion {"questions": [{"question": "Which two should we do next?", "header": "Next two", "multiSelect": true, "options": [{"label": "Due-date misses", "description": "Handle 'for Saturday 10 Oct' and a trailing 'tomorrow'; small spec change (R12) plus tests, then commit."}, {"label": "Tidy-up", "description": "Fix tasks.md filename, add usage notes, de-duplicate ingest report lines; low risk, quick."}, {
+
+[RESULT] Your questions have been answered: "Which two should we do next?"="Live Gmail check, Due-date misses, Tidy-up, Brief check + S-5/S-6". You can now continue with these answers in mind.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\dates.py", "old_string": "_KEYWORD = re.compile(r\"\\b(?:by|due|before|until|from)\\b|\\s[—–-]+\\s\")", "new_string": "_KEYWORD = re.compile(r\"\\b(?:by|due|before|until|from|for)\\b|\\s[—–-]+\\s\")\n_TRAILING = re.compile(r\"\\s((?:eod )?tomorrow|eod|today)[.\\s]*$\", re.IGNORECASE)"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\dates.py", "old_string": "        candidates.append((m.start(), m.group(1)))\n    for start, rest", "new_string": "        candidates.append((m.start(), m.group(1)))\n    t = _TRAILING.search(text)                      # v1.1: trailing \"tomorrow\" / \"today\" / \"EOD\"\n    if t:\n        cand
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "old_string": "        out = [f\"read {self.read} files\"]\n        out += [f\"skipped {f}: {why}\" for f, why in self.skipped]\n        out += [f\"added {self.added}\", f\"updated {self.updated}\"]\n        out += [f\"ambiguous owner: {a}\" for a in self.ambiguous]\n        out +=
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python - <<'EOF'\nimport re, pathlib\ndef sub(path, old, new):\n    p = pathlib.Path(path); t = p.read_text(encoding=\"utf-8\")\n    assert old in t, (path, old[:40]); p.write_text(t.replace(old, new, 1), encoding=\"utf-8\")\n\nsub(\"docs/requirements.md\", \"**Version:** v1.0 FROZEN 2026-11-24. Later changes are new versions
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\dates.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\dates.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] ...............................................................          [100%]
+63 passed in 3.47s
+
+[CLAUDE] The 63 tests pass. Now I'll add the short usage notes, then run the leak scan and commit.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\README.md", "content": "# actiontrack\n\nReads [masked]down meeting notes, tracks the action items in a local SQLite file, and drafts follow-up emails. It never sends email.\n\nPython 3.13, standard library only ([masked] for tests).\n\n## Commands\n\n```\npython -m actiontrack ingest notes/                      # parse every .md note
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && git add README.md actiontrack tests docs modules && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan: none\") && git commit -q -F - <<'EOF'\nfeat(actiontrack): due-phrase 'for' and trailing forms, unique report, README (v1.1)\n\n- requirements v1.1 (AC-4.4 only
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\README.md (file state is current in your context — no need to Read it back)
+
+[RESULT] README.md
+actiontrack/dates.py
+actiontrack/service.py
+docs/requirements.md
+docs/sdd-log.md
+modules/actiontrack/adr.md
+modules/actiontrack/spec.md
+modules/actiontrack/tasks.md
+modules/actiontrack/tests.md
+tests/test_dates.py
+tests/test_service.py
+leak scan: none
+--- audit
+files: clean
+actiontrack-dev <[email masked]>
+messages: clean
+added 108
+updated 23
+ambiguous owner: 2026-09-17-billing-migration-sync.md: Priya (sign off the cutover checklist)
+no/defaulted due: 2026-09-03-billing-migration-sync.md: snapshot the production DB before cutover
+no/defaulted due: 2026-10-12-billing-post-cutover.md: write the migration runbook
+
+[CLAUDE] Two of the four are done and committed: the due-date misses and the tidy-up. `python -m [masked]` gives 63 passed. The new leak audit of files, history and authors is clean.
+
+**Due-date misses**
+- "schedule cutover for Saturday 10 Oct" now resolves to 2026-10-10, and "circulate the summary tomorrow" to the day after its meeting. Neither falls back to meeting + 7 days any more.
+- `for 5 customers` and `for invoice rounding` still stay undated. A phrase only counts if the whole thing resolves to a date.
+- This changed a frozen rule, so requirements are now v1.1 (AC-4.4 only). I recorded it in R12, `tests.md` (T-38) and ADR-ACTIONTRACK-003.
+- A side effect: `for Friday` in ordinary prose now reads as a due date.
+
+**Tidy-up**
+- `tasks.md` now names the right test file.
+- The ingest report no longer repeats the same line once per attendee.
+- I added a `README.md` with usage for the four commands.
+
+**Still waiting on you**
+1. **Live Gmail check.** Authorise the Gmail connector in your claude.ai connector settings. I'll then run `--sink claude` once and correct the tool name if needed.
+2. **Brief check.** Paste the full `baseReq.md` and tell me whether S-5 and S-6 are fine. S-5: a repeat with no due date keeps the earlier one. S-6: `--status open` includes overdue items.
+
+[USER] also we will have to make it easier for user to use it, if possible if in the readme if user can just directly run the some file which will take care of everything and will provide user with the way to use the app
+
+[CLAUDE] Good idea. I'll add a one-file launcher: `python run.py` opens a numbered menu and needs no install step, plus `run.bat` and `run.sh` for double-click or shell use. It's a new feature, so I'll keep the SDD trail: a small requirements v1.2 (FR-10), a spec rule, tests, then the code.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python - <<'EOF'\nimport pathlib\ndef sub(path, old, new):\n    p = pathlib.Path(path); t = p.read_text(encoding=\"utf-8\")\n    assert old in t, (path, old[:50]); p.write_text(t.replace(old, new, 1), encoding=\"utf-8\")\n\nsub(\"docs/requirements.md\", \"**Version:** v1.1 (2026-11-24). v1.0 was frozen the same day; v1.1 is a
+
+[RESULT] done
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\run.py", "content": "#!/usr/bin/env python3\n\"\"\"actiontrack launcher: run this one file.\n\n    python run.py                 opens a menu that walks you through everything\n    python run.py <command> ...   same as: python -m actiontrack <command> ...\n\nNeeds only Python 3.10+ (tested on 3.13). Nothing to install for the ap
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\run.bat", "content": "@echo off\nrem Double-click or run: finds Python and starts the actiontrack menu.\ncd /d \"%~dp0\"\nwhere py >nul 2>nul && (py -3 run.py %* & goto :done)\nwhere python >nul 2>nul && (python run.py %* & goto :done)\necho Python 3.10 or newer was not found. Install it from https://www.python.org/downloads/ an
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\run.sh", "content": "#!/bin/sh\n# Finds Python and starts the actiontrack menu.\ncd \"$(dirname \"$0\")\" || exit 1\nif command -v python3 >/dev/null 2>&1; then exec python3 run.py \"$@\"; fi\nif command -v python >/dev/null 2>&1; then exec python run.py \"$@\"; fi\necho \"Python 3.10 or newer was not found. Install it from http
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_run.py", "content": "import builtins\nimport json\nimport os\n\nimport [masked]\n\nimport run\nfrom conftest import ROOT_DIR if False else SAMPLE  # noqa: F401\n"}
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\run.py (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\run.bat (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\run.sh (file state is current in your context — no need to Read it back)
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\tests\test_run.py (file state is current in your context — no need to Read it back)
+
+[CLAUDE] The `test_run.py` I just wrote is a broken placeholder, so I'm replacing it with the real tests.
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_run.py", "content": "import builtins\nimport os\n\nimport [masked]\n\nimport run\nfrom conftest import write_note\n\nROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nAT = [\"Sam Okafor\", \"Rahul Mehta\", \"Rahul Verma\"]\n\n\ndef feed(monkeypatch, answers):\n    it = iter(answers)\n\n    def fake(pr
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\tests\test_run.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[CLAUDE] I wrote two meaningless assertions in there, one always true and one ending in `or True`. I'm replacing them with real checks and adding the README quick-start, which one test requires.
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_run.py", "old_string": "    assert \"nothing was sent\" not in out or \"nothing was sent\" in out\n    # follow-up", "new_string": "    # follow-up"}
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_run.py", "old_string": "    out = capsys.readouterr().out\n    assert \"Please type a number from 0 to 6\" in out\n    assert \"Please type the ID number\" in out\n    assert \"does not look like an email\" in out\n    assert \"Status must be open, done or overdue\" in out\n    assert \"AT-E002\
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\README.md", "old_string": "Python 3.13, standard library only ([masked] for tests).\n\n## Commands", "new_string": "Python 3.13, standard library only ([masked] for tests).\n\n## Quick start\n\nRun one file. It checks Python, then shows a menu that walks you through everything.\n\n- **Windows:** double-click `r
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q 2>&1 | tail -25", "description": "Run full suite with launcher tests"}
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\tests\test_run.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\tests\test_run.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\README.md has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] ........................................................F.............   [100%]
+================================== FAILURES ===================================
+______________________ test_bad_input_keeps_menu_running ______________________
+
+env = WindowsPath('C:/Users/[user]/AppData/Local/Temp/[masked]-of-[masked].[masked]_[masked]/[masked]-4/test_bad_input_keeps_menu_runn0')
+monkeypatch = <_[masked].monkeypatch.MonkeyPatch object at 0x00000281ECE3D850>
+capsys = <_[masked].capture.CaptureFixture object at 0x00000281ECD7EC30>
+
+    def test_bad_input_keeps_menu_running(env, monkeypatch, capsys):  # T-43
+        feed(monkeypatch, ["n", "9", "3", "abc", "4", "Sam Okafor", "not-an-email", "2", "", "sometimes", "", "4", "Rahul", "[email masked]", "file", "0"])
+        assert run.main([]) == 0
+        cap = capsys.readouterr()
+        out, err = cap.out, cap.err
+        assert "Please type a number from 0 to 6" in out
+        assert "Please type the ID number" in out
+        assert "does not look like an email" in out
+        assert "Status must be open, done or overdue" in out
+>       assert "AT-E002" in err and "Rahul Mehta" in err and "Rahul Verma" in err   # shared first n ...[519 more chars cut]
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\service.py", "old_string": "    if kind == AMBIGUOUS:\n        raise AmbiguousOwner(owner, store.people_by_first_name(owner.split()[0]))", "new_string": "    if kind == AMBIGUOUS:\n        candidates = store.people_by_first_name(owner.split()[0])\n        if not candidates:\n            raise N
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\cli.py", "old_string": "    except SinkError as exc:\n        print(f\"AT-E004 could not create the draft: {exc}\", file=err)", "new_string": "    except service.NotFound:\n        print(f\"AT-E001 no one named '{args.owner}' found. Load the notes first, or check the spelling.\", file=err)\n   
+
+[TOOL] Edit {"replace_all": false, "file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\tests\\test_run.py", "old_string": "    feed(monkeypatch, [\"n\", \"9\", \"3\", \"abc\",", "new_string": "    feed(monkeypatch, [\"y\", \"9\", \"3\", \"abc\","}
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && cat >> tests/test_run.py <<'EOF'\n\n\ndef test_followup_unknown_person_is_a_clear_error(env, monkeypatch, capsys):\n    feed(monkeypatch, [\"n\", \"4\", \"Nobody\", \"[email masked]\", \"file\", \"0\"])\n    assert run.main([]) == 0\n    err = capsys.readouterr().err\n    assert \"AT-E001\" in err and \"Nobody\" in err and
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\service.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\actiontrack\cli.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] The file c:\Users\[user]\Documents\Practitoner-test\tests\test_run.py has been updated successfully. (file state is current in your context — no need to Read it back)
+
+[RESULT] .......................................................................  [100%]
+============================= slowest 3 durations =============================
+0.64s call     tests/test_cli.py::test_module_entrypoint
+0.41s call     tests/test_cli.py::test_deterministic_and_speed
+0.19s call     tests/test_cli.py::test_followup_empty_and_ambiguous_and_needs_to
+71 passed in 4.46s
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && sed -i 's/^- \\[ \\] 8.1/- [x] 8.1/' modules/actiontrack/tasks.md && git add run.py run.bat run.sh README.md actiontrack tests docs modules && git diff --cached --name-only && (git diff --cached | grep -niE \"stessa|[masked]|[masked]|[masked]\" || echo \"leak scan: none\") && git commit -q -F - <<'EOF'\nfeat(actiontrack): one-file l
+
+[TOOL] ToolSearch {"query": "gmail create draft", "max_results": 8}
+
+[RESULT] README.md
+actiontrack/cli.py
+actiontrack/service.py
+docs/requirements.md
+docs/sdd-log.md
+modules/actiontrack/adr.md
+modules/actiontrack/spec.md
+modules/actiontrack/tasks.md
+modules/actiontrack/tests.md
+run.bat
+run.py
+run.sh
+tests/test_run.py
+leak scan: none
+cecc198 actiontrack-dev feat(actiontrack): one-file launcher with menu, follow-up error fix (v1.2)
+a70f8c6 actiontrack-dev feat(actiontrack): due-phrase 'for' and trailing forms, unique report, README (v1.1)
+actiontrack-dev <[email masked]>
+files: clean
+[This command modified 1 file you've previously read: modules\actiontrack\tasks.md. Call Read before editing.]
+
+[RESULT]        
+
+[CLAUDE] Two items remain. Everything else is built, tested (71 passing) and committed, with the launcher work in `cecc198`. The leak audit is clean.
+
+1. **Live Gmail check.** I haven't run it yet.
+   - **Connector not visible here:** I searched for Gmail tools and found only Drive, Docs and Calendar, so the Gmail connector isn't visible to this session. A connector added mid-session usually appears only after you restart Claude Code or open a new session.
+   - **What I'll do:** run `python run.py followup "<name>" --to <address> --sink claude` once, confirm a draft appears in Gmail, and correct the guessed tool name in `sinks.py` if it fails. A wrong name fails safely: the CLI exits 3 and prints the full draft, with nothing sent.
+   - **What I need from you:** start a new session, and tell me which address to put in `--to`. This creates one real draft in your mailbox, and I'd rather you type the address than have me use yours.
+
+2. **Brief check.** Paste the full text of `docs/baseReq.md`, since the copy here is cut off in several places. Tell me too whether assumptions S-5 and S-6 are fine. S-5: a repeat with no due date keeps the earlier due date. S-6: `--status open` includes overdue items. I'll compare the behaviour against the full brief and fix any differences.
+
+[USER] have you run the tests, on the notes, give me a comprhensive summary and eveyrthing in the html file so that i can see it as well as add that in the docs or somewhere else to kinda show it, if possible have everything generate an html for user to see it better
+
+[CLAUDE] You want three things: the tests run against the notes, a full summary in an HTML file, and an HTML view built into the app itself. Here is the plan, following the same spec-first process:
+
+- **App feature:** a `report` command and a menu option that generate an HTML view of the tracked items.
+- **Summary builder:** `tools/build_summary.py`, which runs the tests, runs the app on `notes/`, and builds `docs/summary.html` from real results.
+
+First I'll record the new requirement, rule, tests and ADR.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python - <<'EOF'\nimport pathlib\ndef sub(path, old, new):\n    p = pathlib.Path(path); t = p.read_text(encoding=\"utf-8\")\n    assert old in t, (path, old[:50]); p.write_text(t.replace(old, new, 1), encoding=\"utf-8\")\n\nsub(\"docs/requirements.md\", \"v1.2: user-requested FR-10 (easy start launcher); no earlier requiremen
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\actiontrack\\report.py", "content": "\"\"\"Self-contained HTML report (stdlib only, ADR-ACTIONTRACK-005).\n\nPure functions returning strings. Every value that came from a note goes through `esc`,\nbecause notes are untrusted input. No external fonts, scripts or links.\n\"\"\"\nfrom __future__ import annotations\n\nimport html\n
+
+[RESULT] ok
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\actiontrack\report.py (file state is current in your context — no need to Read it back)
+
+[TOOL] Write {"file_path": "c:\\Users\\[masked]-Admin\\Documents\\Practitoner-test\\modules\\NEW-SESSION-PROMPTS.md", "content": "# New-session prompts\n\nOpen this project folder in a NEW Claude Code session (so the Gmail connector is loaded), then paste the prompt below.\n\n## Prompt: live Gmail check, then finish the HTML report\n\n```\nThis is the actiontrack project (spec-driven build, already working: 71 
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && python -m [masked] -q 2>&1 | tail -2 && printf '%s\\n' '| 17:25 | Handoff | `modules/NEW-SESSION-PROMPTS.md` | Phase 9 started (`report.py` written, rest pending). Work saved for a new session so the Gmail connector can be checked live |' >> docs/sdd-log.md && sed -i 's/^- \\[ \\] 9.1 .*/& **In progress:** report.py written; CL
+
+[RESULT] File created successfully at: c:\Users\[user]\Documents\Practitoner-test\modules\NEW-SESSION-PROMPTS.md (file state is current in your context — no need to Read it back)
+
+[RESULT] .......................................................................  [100%]
+71 passed in 6.49s
+A  actiontrack/report.py
+M  docs/requirements.md
+M  docs/sdd-log.md
+A  modules/NEW-SESSION-PROMPTS.md
+M  modules/actiontrack/adr.md
+M  modules/actiontrack/spec.md
+M  modules/actiontrack/tasks.md
+M  modules/actiontrack/tests.md
+leak scan: none
+06a0691 actiontrack-dev wip(actiontrack): HTML report spec and report.py, new-session prompt
+0
+files: clean
+actiontrack-dev <[email masked]>
+[This command modified 2 files you've previously read: docs\sdd-log.md, modules\actiontrack\tasks.md. Call Read before editing.]
+
+[CLAUDE] Everything is saved and committed as `06a0691`. The 71 tests still pass, the working tree is clean, and the leak audit of files, history and authors is clean.
+
+Open this project folder in a new session so the Gmail connector loads, then paste this. The same text is in [modules/NEW-SESSION-PROMPTS.md](modules/NEW-SESSION-PROMPTS.md).
+
+```
+This is the actiontrack project (spec-driven build, already working: 71 tests pass).
+Read CLAUDE.md first (it has hard rules), then docs/sdd-log.md, modules/actiontrack/tasks.md and README.md.
+
+Rules that always apply:
+- No organisation, employer, client or personal names/emails in any file, log or commit. Git identity is already set locally to a generic one; do not change it, and scan staged diffs and `git log` authors before every commit.
+- Commits are allowed without asking (format in CLAUDE.md). Never stage env files, keys or *.db.
+- followup creates drafts only. Never send an email.
+
+Task 1: live Gmail check.
+a) List the Gmail connector tools available in this session and tell me the exact name of the create-draft tool.
+b) Compare it with GMAIL_CREATE_DRAFT_TOOL in actiontrack/sinks.py (spec assumption S-3). If it differs, fix the constant, add a unit test for the argv, update the S-3 note in modules/actiontrack/spec.md, and log it in docs/sdd-log.md.
+c) Creating a draft writes to my real mailbox, so ask me for the recipient address first (I will type it; use my own test address, do not guess one). Then run:
+   python run.py --today 2026-10-01 ingest notes
+   python run.py --today 2026-10-01 followup "Sam Okafor" --to <MY_TEST_ADDRESS> --sink claude
+   Confirm a DRAFT exists in Gmail (not sent). If it fails, show me the error; the CLI should exit 3 and print the full draft.
+d) Commit the result.
+
+Task 2: finish Phase 9 (HTML report), already specified in docs/requirements.md FR-11, modules/actiontrack/spec.md R21, tests.md T-45..T-49, ADR-ACTIONTRACK-005.
+Done already: actiontrack/report.py (pure HTML builders, escaping).
+To do, test-first:
+- `actiontrack report [--out FILE]` command in actiontrack/cli.py (writes report.html, uses the same --today as list).
+- Menu option 7 in run.py: generate the report and open it in the browser (webbrowser, faked in tests); update the "0-6" texts to "0-7".
+- tools/build_summary.py: builds docs/summary.html from REAL runs: the [masked] result (junit xml), a run of the app over notes/ (per-file read/skip result, item counts, ambiguous owners, deduplicated items, items table), test-plan coverage (T-ids in tests.md vs tests/*.py), the SDD trail (git log + docs/sdd-log.md timeline + ADR list), the brief-vs-delivered checklist and open items. Reuse actiontrack/report.py. Self-contained HTML, no external links, light and dark colours.
+- tests T-45..T-49 in tests/test_report.py (include an escaping test with a <script> task), README section, tick Phase 9 in tasks.md, log entry, commit.
+Run python -m [masked] at the end and show me the result.
+
+Task 3 (needs me): I will paste the full, untruncated docs/baseReq.md text and confirm assumptions S-5 and S-6. When I do, diff the behaviour against it, list any difference, and fix them through the normal gates (requirements version bump, spec, tests, code).
+```
+
+**Your earlier questions, answered honestly**
+- **Tests on the notes:** yes, both ran. `python -m [masked]` gives 71 passed. The notes run covers all 34 files: 31 read, 4 skipped with reasons, and the `.txt` ignored.
+- **HTML summary:** not done yet, which is why Task 2 is in the prompt. The report-generating module `actiontrack/report.py` is written but untested, and the rest of Phase 9 is queued.
+- **Brief paste:** it's the same cut-off text as `docs/baseReq.md`, so it doesn't close the brief-check gap. The new session still needs the full untruncated brief.
+
+[USER] create the conversation.md i.e using the export conversation feature and save it under docs or somehwere
+
+[CLAUDE] I can't run `/export` myself, because it's a built-in Claude Code command that only you can type. I also don't want to write a conversation file from memory and call it an export. Here is what to do.
+
+[TOOL] Bash {"command": "cd \"c:/Users/[user]/Documents/Practitoner-test\" && printf '\\n# Raw conversation exports: contain machine paths and account names. Only the sanitised docs/conversation.md is committed.\\ndocs/conversation.raw.md\\n*.raw.md\\n' >> .gitignore && printf '%s\\n' '| 17:30 | Export | `.gitignore` | Raw conversation exports are git-ignored; only a sanitised `docs/conversation.md` ma
+
+[RESULT] .gitignore
+docs/sdd-log.md
+leak scan: none
+93ba6a3 chore(sdd): git-ignore raw conversation exports
+0
+
+[CLAUDE] The export is something you need to run, and the raw file must not be committed as-is. It will contain your machine's folder names, your account names, and the org name from the skill text. Your no-org-details rule applies to it, so I've made it safe to export.
+
+**What I did:** I added `docs/conversation.raw.md` and `*.raw.md` to `.gitignore` and committed that as `93ba6a3`. The raw export can't be committed by accident. The tree is clean.
+
+**What you do:**
+1. In this session, type `/export docs/conversation.raw.md`. If your version has no filename option, run `/export`, choose "save to file", and put it at that path.
+2. Tell me when it's done.
+
+**What I'll do next:**
+- Read the raw file and replace org names, personal names, emails and machine paths with neutral placeholders.
+- Save the result as `docs/conversation.md`.
+- Run the leak scan over the sanitised file, plus `git log`, and only then commit it. The raw file stays untracked.
+
+If you'd rather skip the export command, I can write a clean `docs/conversation.md` myself, covering the prompts, the decisions and the outcomes. It would be a reconstruction, not a verbatim export, so I'd label it that way at the top.
+
+The Gmail connector tools now show up in this session. The live Gmail check (Task 1 in `modules/NEW-SESSION-PROMPTS.md`) can run here whenever you give me a test address.

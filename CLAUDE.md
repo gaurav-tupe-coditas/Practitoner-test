@@ -25,6 +25,11 @@ CLI that reads markdown meeting notes, tracks action items in SQLite, and drafts
 - Git identity for this repo is local and generic (`git config --local user.name/user.email`); never rely on the global identity.
 - Before every commit: `git diff --cached` scan for names/emails, and check `git log --format='%an %ae'`.
 
+## Sending master switch (decided 2026-11-24)
+- Env `ACTIONTRACK_ALLOW_SEND` (default `0`/unset = OFF). The requirements say the tool never sends, so the app has no send path (AC-8.4, tested by T-28) and no switch can add one.
+- Claude (the assistant) creates drafts only. It does not send email through the Gmail connector unless the switch is `1` in the environment. The human reviews and sends drafts by hand (requirements, actors table). Drafts are always allowed.
+- `.env.example` holds the placeholder; real env files are never committed.
+
 ## Business rules (see requirements.md)
 - `followup` only creates drafts. No send path may exist.
 - Ambiguous owners (two Priyas, two Rahuls) are flagged, never guessed.

@@ -76,9 +76,10 @@ def test_followup_draft_golden(tmp_path):  # T-24
     d = sink.drafts[0]
     assert d.to == "sam@example.invalid" and d.subject == "Action items for Sam Okafor: 1 overdue, 1 open"
     assert d.body == (
-        "Hi Sam,\n\nHere are your action items from recent meetings.\n\n"
-        "Overdue:\n- overdue thing (due 2026-09-10) from 2026-09-01 1.md\n\n"
-        "Open:\n- open thing (due 2026-10-20) from 2026-09-01 1.md\n\nPlease reply with any updates.\n")
+        "Hi Sam,\n\nHere is where your action items stand: 1 overdue, 1 open.\n\n"
+        "OVERDUE (1)\n  1. overdue thing\n     Due 10 Sep 2026 - from the 1 Sep 2026 meeting (1.md)\n\n"
+        "OPEN (1)\n  1. open thing\n     Due 20 Oct 2026 - from the 1 Sep 2026 meeting (1.md)\n\n"
+        "Please reply with any updates.\n")
     assert "done thing" not in d.body
 
 
@@ -139,7 +140,10 @@ def test_file_sink(tmp_path):  # T-31
     d = Draft("Sam Okafor", "s@example.invalid", "Subj", "Body", date(2026, 10, 1))
     FileDraftSink(str(tmp_path / "dr")).create_draft(d)
     data = json.load(open(tmp_path / "dr" / "sam-okafor-2026-10-01.json", encoding="utf-8"))
-    assert data == {"to": "s@example.invalid", "subject": "Subj", "body": "Body"}
+    assert data == {"to": "s@example.invalid", "subject": "Subj", "body": "Body", "html": ""}
+    d2 = Draft("Sam Okafor", "s@example.invalid", "Subj", "Body", date(2026, 10, 2), "<p>Hi</p>")   # T-51: preview file
+    FileDraftSink(str(tmp_path / "dr")).create_draft(d2)
+    assert (tmp_path / "dr" / "sam-okafor-2026-10-02.html").read_text(encoding="utf-8") == "<p>Hi</p>"
 
 
 def test_offline(tmp_path, monkeypatch):  # T-32

@@ -33,7 +33,8 @@
 | T-21 list-filters | R16, AC-6.1 | I | owner + status + `--due-before` combined | AND semantics; order by effective due then id |
 | T-22 list-ambiguous | R16, AC-6.4 | I | `list --owner Priya` with two Priyas | stderr names Priya Nair and Priya Shah, exit 2, no rows; `--owner "Priya Nair"` works; `--owner unassigned` works |
 | T-23 done | R17, AC-7.1..7.3 | I | `done 1`, `done 1`, `done 9999` | ok; already-done exit 0; unknown exit 1 `AT-E001`; ids unchanged after re-ingest |
-| T-24 followup-draft | R18, AC-8.1/8.2 | I | owner with 1 overdue + 1 open + 1 done | overdue first, then open, done absent; golden subject and body |
+| T-24 followup-draft | R18, AC-8.1/8.2 | I | owner with 1 overdue + 1 open + 1 done | overdue first, then open, done absent; golden subject and (v1.5) plain-text body |
+| T-51 followup-html | R23, AC-8.7 | U | owner with 1 overdue, 1 open (one with no due date), task text `<b>x</b> & y` | html has both sections, counts, escaped task, `assumed` wording, no `<script`, no external link; plain text matches the section 6 layout |
 | T-25 followup-empty | R18, AC-8.2 | I | owner with only done items | message, no file written, exit 0 |
 | T-26 followup-ambiguous | R18, AC-8.3 | I | `followup Rahul --to x@example.invalid` | exit 2, no draft |
 | T-27 followup-needs-to | R18, AC-8.5 | E | no `--to` | exit 2 usage |

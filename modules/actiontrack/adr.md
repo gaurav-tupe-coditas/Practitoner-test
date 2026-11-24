@@ -49,3 +49,19 @@ Central ADRs: `docs/adr/ADR-0001`, `ADR-0002`. Newest last.
 - **Context:** A report that must be asked for goes stale. Which commands should refresh it?
 - **Decision:** Refresh after `ingest`, `done` (they change the data) and `list` (the view the user is looking at). Not `followup` (changes no items). Always the full item set. Opt out with `--no-report`; location with `--report`. Write failure is a warning, never a failed command.
 - **Consequences:** `list` and `ingest` now write a file in the working directory (default `report.html`, git-ignored). Tests isolate the working directory so the repo is never written.
+
+### ADR-ACTIONTRACK-007: Follow-up emails carry an HTML version built by hand
+- **Status:** Accepted
+- **Date:** 2026-11-24
+- **Decided by:** User (recipients found the plain-text email ugly)
+- **Context:** The Gmail create-draft tool accepts `body` (plain) and `htmlBody`. Email clients ignore `<style>` blocks and scripts inconsistently.
+- **Decision:** Build the HTML in `draft.py` with inline styles and table layout, escaping every value; keep a tidy plain-text alternative. The `claude` sink passes both and says "draft only".
+- **Consequences:** `Draft` gains an `html` field (default empty, so old callers work). Golden tests cover the plain text; a separate test covers structure and escaping of the HTML. Email-client rendering was checked by eye only.
+
+### ADR-ACTIONTRACK-008: Sending is off by a master switch, and the app has no send path
+- **Status:** Accepted
+- **Date:** 2026-11-24
+- **Decided by:** User ("it doesn't have to send"; a master switch in the env so we do not fail the requirements)
+- **Context:** AC-8.4 forbids any send code path and T-28 tests that. A switch inside the app that enabled sending would break that.
+- **Decision:** `ACTIONTRACK_ALLOW_SEND` (default 0) is a rule for the assistant, written in `CLAUDE.md` and `.env.example`; the app does not read it and cannot send. With the switch off the assistant creates drafts and the human sends them from Gmail, which is what the requirements describe.
+- **Consequences:** The requirement stays true by construction. An earlier one-off send (logged in `docs/sdd-log.md`) happened through the connector outside the app before this switch existed; it is not repeated.

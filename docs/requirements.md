@@ -1,6 +1,6 @@
 # actiontrack: Requirements
 
-**Version:** v1.4 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed. v1.4: user-requested AC-11.6 (report refreshes on every data command); AC-11.3 widened to match.
+**Version:** v1.5 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher). v1.3: user-requested FR-11 (HTML report); no earlier requirement changed. v1.4: user-requested AC-11.6 (report refreshes on every data command); AC-11.3 widened to match. v1.5: user-requested AC-8.7 (readable HTML follow-up email); AC-8.1 wording unchanged.
 **Date:** 2026-11-24
 **Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and marked **Assumption**)
 
@@ -78,6 +78,7 @@ The same action repeats across meetings (e.g. "Priya N. to send the revised quot
 - AC-8.2 Done items are never included. An owner with nothing open gets no draft (message instead).
 - AC-8.3 Ambiguous first name: same behaviour as AC-6.4.
 - AC-8.4 No code path calls a send operation. Only draft creation is allowed. This is tested.
+- AC-8.7 (v1.5) The follow-up is a readable email: an HTML version (summary counts, an Overdue section and an Open section, one card per item with task, due date and source meeting) plus a plain-text alternative laid out for reading, not a raw dump. All note text is HTML-escaped. Dates read like `10 Sep 2026`; an assumed due date says so in words. The `claude` sink asks Gmail for both versions. Still draft-only.
 - AC-8.5 The recipient email address is not in the notes. How it is supplied is **open question OQ-1**.
 - AC-8.6 If the connector is unavailable or not authorised, the CLI prints the full draft text and a clear message, and exits non-zero. Nothing is lost.
 
@@ -127,6 +128,8 @@ A visual view of the tracked items and of the project's evidence, so a person ca
 | 2026-11-24 | A-4: `Everyone` = one item per attendee | User |
 | 2026-11-24 | A-10: undated note is skipped whole and reported | User |
 | 2026-11-24 | A-3, A-5, A-8 kept as written | User |
+| 2026-11-24 | Sending off by default: `ACTIONTRACK_ALLOW_SEND` master switch for the assistant; app has no send path (ADR-008) | User |
+| 2026-11-24 | AC-8.7: follow-up emails are HTML with a readable text fallback | User |
 | 2026-11-24 | AC-11.6: report.html refreshes after ingest, list, done (not followup) | User |
 
 ## 7. Assumptions to veto (A-1 to A-10)

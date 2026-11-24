@@ -29,6 +29,7 @@
 | R20 | `run.py` (v1.2): no arguments -> version check (3.10+) then menu; with arguments -> same as `python -m actiontrack`. Menu data lives next to the launcher (`actiontrack.db`, `drafts/`, `notes/`), so it works from any folder. Offers to load `notes/` when no data file exists. EOF or Ctrl+C exits 0. Menu calls `cli.main` in-process; the only subprocess is the optional self-test (`pytest`). | AC-10.1..10.6 |
 
 | R21 | `report.py` (v1.3): pure functions that return an HTML string; every note-derived value goes through `html.escape`; no external fonts, scripts or links; light and dark colours via `prefers-color-scheme`. CLI `report` writes only the `--out` file. `tools/build_summary.py` reuses `report.py` and writes `docs/summary.html`. | AC-11.1..11.5 |
+| R23 | `build_draft` returns `Draft(owner, to, subject, body, day, html)`; `body` and `html` follow section 6. `FileDraftSink` also writes `<owner>-<date>.html` for preview. `ClaudeGmailDraftSink` prompt tells the connector to create a draft with `body` as plain text and `htmlBody` verbatim, never to send. | AC-8.7 |
 | R22 | CLI global options `--report FILE` (default `report.html`) and `--no-report`. After a successful `ingest`, `list` or `done` the CLI writes the full report (all items, same `today`) and prints `report updated: <file>`. `followup` and failed commands do not. A write failure prints `AT-W001 could not update report: ...` to stderr and keeps the exit code. The launcher passes `--report` pointing at its own folder. | AC-11.6 |
 
 ## 2. Due-phrase resolution (base = meeting date `M`)
@@ -76,7 +77,27 @@ Store methods: `upsert_item(...)`, `add_source`, `get_item(id)`, `mark_done(id, 
 
 ## 6. Followup email format
 
-Subject: `Action items for <owner>: <n> overdue, <m> open`. Body: greeting with owner's first name, an "Overdue" list, an "Open" list (each `- <task> (due <date>) from <meeting date> <source file>`), closing line. Plain text, no personal data beyond names in the notes.
+Subject: `Action items for <owner>: <n> overdue, <m> open` (unchanged). v1.5 body, two versions of the same content:
+
+Plain text (`Draft.body`):
+```
+Hi <first>,
+
+Here is where your action items stand: <n> overdue, <m> open.
+
+OVERDUE (<n>)
+  1. <task>
+     Due <d Mon YYYY> - from the <d Mon YYYY> meeting (<source file>)
+
+OPEN (<m>)
+  1. <task>
+     Due <d Mon YYYY> (assumed: no date was set) - from the <d Mon YYYY> meeting (<source file>)
+
+Please reply with any updates.
+```
+Sections with no items are omitted. `(assumed: no date was set)` replaces the old `(default)` and appears when the item had no stated due date (meeting + 7 days).
+
+HTML (`Draft.html`): email-safe (inline styles, table layout, no scripts, no external images or fonts): header band, greeting, two count chips, an Overdue section (red accent) and an Open section (blue accent), one card per item (task bold; due date and source meeting beneath, source file in small grey). Every note-derived value goes through `html.escape`. No personal data beyond names in the notes.
 
 ## 7. Non-functional
 
