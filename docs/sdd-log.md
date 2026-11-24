@@ -26,3 +26,4 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | 16:25 | Privacy | repo + git history | User rule W-6: no org or personal details anywhere. Audit found a leak in the log and the git author identity; fixed, commit rewritten, generic identity set |
 | 16:28 | Requirements | `docs/requirements.md` | Rev 2: A-6 on-or-after, A-9 meeting date + 7 days, A-4 Everyone = every attendee, A-10 kept. User confirmed final, frozen at v1.0 |
 | 16:34 | Specification | `docs/specification.md`, `docs/adr/ADR-0001`, `ADR-0002` | Spec written and confirmed. OQ-1 decided: option A (port + file sink + claude CLI sink). User chose short module files to fit the time box |
+| 16:37 | Module brief | `modules/actiontrack/{spec_task,analysis,adr}.md` | T1 dedup = normalised text (ADR-ACTIONTRACK-001); T2 next/end-of phrases = following calendar week (ADR-ACTIONTRACK-002). Confirmed |
