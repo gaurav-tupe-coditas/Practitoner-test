@@ -29,3 +29,4 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | 16:33 | Module brief | `modules/actiontrack/{spec_task,analysis,adr}.md` | T1 dedup = normalised text (ADR-ACTIONTRACK-001); T2 next/end-of phrases = following calendar week (ADR-ACTIONTRACK-002). Confirmed |
 | 16:36 | Module spec | `modules/actiontrack/spec.md` | Rules R1-R19, due table, CLI shapes, exit codes. Confirmed final |
 | 16:39 | Module tests | `modules/actiontrack/tests.md` | T-01..T-37 cover R1-R19 and all ACs; S-5 added. Confirmed final |
+| 16:42 | Plan | `modules/actiontrack/plan.md`, `tasks.md` | 7 phases, test-first, trunk on main. Approved; build started |
