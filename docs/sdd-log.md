@@ -30,3 +30,4 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | 16:36 | Module spec | `modules/actiontrack/spec.md` | Rules R1-R19, due table, CLI shapes, exit codes. Confirmed final |
 | 16:39 | Module tests | `modules/actiontrack/tests.md` | T-01..T-37 cover R1-R19 and all ACs; S-5 added. Confirmed final |
 | 16:42 | Plan | `modules/actiontrack/plan.md`, `tasks.md` | 7 phases, test-first, trunk on main. Approved; build started |
+| 16:47 | Build | `actiontrack/`, `tests/` | Phases 1-7 built test-first; `python -m pytest` = 61 passed. Sample ingest: 31 read, 4 skipped with reasons, 6 ambiguous owners flagged. Live Gmail not tested (connector unauthorised); claude sink covered by fake-runner test |
