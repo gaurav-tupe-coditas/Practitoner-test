@@ -34,3 +34,5 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | 16:55 | Change | `requirements.md` v1.1, `spec.md` R12, `tests.md` T-38/T-39, ADR-ACTIONTRACK-003 | User-requested: `for` and trailing tomorrow/today/EOD read as due phrases; ingest report de-duplicated; tasks.md filename fixed |
 | 17:00 | Change | `requirements.md` v1.2 (FR-10), `spec.md` R20, `tests.md` T-40..T-44, ADR-ACTIONTRACK-004 | User-requested: one-file launcher with a menu; README quick-start |
 | 17:05 | Fix | `service.followup`, `cli.py` | Found by the launcher tests: follow-up for a name not in the data said "matches several people: ." Now `AT-E001 no one named ... found`, exit 1 |
+| 17:20 | Change | `requirements.md` v1.3 (FR-11), `spec.md` R21, `tests.md` T-45..T-49, ADR-ACTIONTRACK-005 | User-requested: HTML report in the app, and a generated project summary in docs |
+| 17:25 | Handoff | `modules/NEW-SESSION-PROMPTS.md` | Phase 9 started (`report.py` written, rest pending). Work saved for a new session so the Gmail connector can be checked live |

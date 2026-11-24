@@ -28,6 +28,8 @@
 
 | R20 | `run.py` (v1.2): no arguments -> version check (3.10+) then menu; with arguments -> same as `python -m actiontrack`. Menu data lives next to the launcher (`actiontrack.db`, `drafts/`, `notes/`), so it works from any folder. Offers to load `notes/` when no data file exists. EOF or Ctrl+C exits 0. Menu calls `cli.main` in-process; the only subprocess is the optional self-test (`pytest`). | AC-10.1..10.6 |
 
+| R21 | `report.py` (v1.3): pure functions that return an HTML string; every note-derived value goes through `html.escape`; no external fonts, scripts or links; light and dark colours via `prefers-color-scheme`. CLI `report` writes only the `--out` file. `tools/build_summary.py` reuses `report.py` and writes `docs/summary.html`. | AC-11.1..11.5 |
+
 ## 2. Due-phrase resolution (base = meeting date `M`)
 
 | Phrase | Result |

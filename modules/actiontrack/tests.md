@@ -73,3 +73,13 @@ Every rule R1-R19 and every AC (1.1-1.4, 2.1-2.6, 3.1-3.6, 4.1-4.5, 5.1-5.3, 6.1
 | T-42 clean-exit | R20, AC-10.5 | I | input raises EOFError / KeyboardInterrupt | returns 0, no traceback |
 | T-43 bad-input | R20, AC-10.2 | I | menu: non-numeric id, bad email, unknown choice | message shown, menu continues |
 | T-44 launchers | AC-10.1, 10.7 | U | `run.bat`, `run.sh` exist and call `run.py`; README has a quick-start with `run.py` | present |
+
+## v1.3 additions (HTML report)
+
+| Test | Rule / AC | Lvl | Setup | Expected |
+|---|---|---|---|---|
+| T-45 report-content | R21, AC-11.1 | I | ingest 3 items (overdue, open, done) then `report --out tmp.html` | file written; counts match; every task text present; filter controls present |
+| T-46 report-escapes | R21, AC-11.2 | U | task text `<script>alert(1)</script>` and owner `A&B` | rendered as `&lt;script&gt;...`; no raw `<script>alert` |
+| T-47 report-asof | R21, AC-11.3 | I | `--today 2026-10-01` | as-of date shown; overdue count uses it |
+| T-48 menu-report | R21, AC-11.4 | I | menu option 7 with the browser opener faked | report file exists, opener called once |
+| T-49 summary-build | R21, AC-11.5 | I | `build_summary.build(run_tests=False)` on the real repo | HTML has the test, notes-run, coverage, SDD-trail and open-items sections |

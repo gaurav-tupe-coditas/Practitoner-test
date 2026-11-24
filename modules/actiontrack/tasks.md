@@ -32,4 +32,7 @@
 ## Phase 8: launcher (v1.2)
 - [x] 8.1 `run.py` menu + pass-through, `run.bat`, `run.sh`, README quick-start. Tests: T-40..T-44.
 
+## Phase 9: HTML report (v1.3)
+- [ ] 9.1 `report.py`, `report` command, menu option 7, `tools/build_summary.py`, `docs/summary.html`. Tests: T-45..T-49. **In progress:** report.py written; CLI command, menu option, build_summary, tests pending (see modules/NEW-SESSION-PROMPTS.md).
+
 ## Coverage: every test T-01..T-37 is assigned to a task above.
