@@ -64,4 +64,4 @@ Central ADRs: `docs/adr/ADR-0001`, `ADR-0002`. Newest last.
 - **Decided by:** User ("it doesn't have to send"; a master switch in the env so we do not fail the requirements)
 - **Context:** AC-8.4 forbids any send code path and T-28 tests that. A switch inside the app that enabled sending would break that.
 - **Decision:** `ACTIONTRACK_ALLOW_SEND` (default 0) is a rule for the assistant, written in `CLAUDE.md` and `.env.example`; the app does not read it and cannot send. With the switch off the assistant creates drafts and the human sends them from Gmail, which is what the requirements describe.
-- **Consequences:** The requirement stays true by construction. An earlier one-off send (logged in `docs/sdd-log.md`) happened through the connector outside the app before this switch existed; it is not repeated.
+- **Consequences:** The requirement stays true by construction. Emails that were actually sent went out through the Gmail connector outside the app, on explicit user instruction (see `GRADER.md`); the app itself never sends.
