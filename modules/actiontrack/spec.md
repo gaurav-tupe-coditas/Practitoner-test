@@ -82,3 +82,4 @@ NFR-1..7 apply as written. `ClaudeGmailDraftSink` runs `claude` with a fixed arg
 - Contract requests: none (single module).
 - **Assumption S-3:** the `claude` CLI flag set for allowing a single tool is checked at implementation time; if it differs, only `sinks.py` changes.
 - **Assumption S-4:** `list` truncates nothing; long tasks wrap is not handled (plain columns).
+- **Assumption S-5:** AC-5.3 "latest meeting's due wins" means the latest meeting that states a due date; a repeat with no due date does not erase an earlier one (see T-17).
