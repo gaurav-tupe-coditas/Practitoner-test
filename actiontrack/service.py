@@ -179,7 +179,10 @@ def mark_done(store: Store, item_id: int, today: date) -> bool:
 def followup(store: Store, owner: str, to: str, today: date, sink) -> Draft | None:
     kind, value = resolve_owner_arg(store, owner)
     if kind == AMBIGUOUS:
-        raise AmbiguousOwner(owner, store.people_by_first_name(owner.split()[0]))
+        candidates = store.people_by_first_name(owner.split()[0])
+        if not candidates:
+            raise NotFound(owner)          # nobody by that name in the data
+        raise AmbiguousOwner(owner, candidates)
     items = [i for i in list_items(store, today, owner=owner) if i.status == "open"]
     if not items:
         return None

@@ -4,7 +4,20 @@ Reads markdown meeting notes, tracks the action items in a local SQLite file, an
 
 Python 3.13, standard library only (pytest for tests).
 
-## Commands
+## Quick start
+
+Run one file. It checks Python, then shows a menu that walks you through everything.
+
+- **Windows:** double-click `run.bat`, or run `python run.py`
+- **macOS / Linux:** run `./run.sh`, or `python3 run.py`
+
+Menu: 1) load notes, 2) show items, 3) mark an item done, 4) draft a follow-up email, 5) self-test, 6) help. On first launch it offers to load the `notes/` folder for you. Follow-ups are saved as draft files in `drafts/` and are never sent.
+
+Nothing needs installing to use the app (only the optional self-test needs `pip install pytest`).
+
+## Commands (for power users)
+
+Everything the menu does is also available as a command. Run them with `python run.py <command>` or `python -m actiontrack <command>`.
 
 ```
 python -m actiontrack ingest notes/                      # parse every .md note, print a report

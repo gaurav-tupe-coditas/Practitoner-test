@@ -29,4 +29,7 @@
 - [x] 7.1 E2E over `notes/`: T-02, T-03, T-32, T-33, T-35, T-36, T-37. Done: `python -m pytest` exit 0, ingest report matches the skip list in T-03.
 - [x] 7.2 Final leak scan (files, `git log` authors) and log entry in `docs/sdd-log.md`.
 
+## Phase 8: launcher (v1.2)
+- [x] 8.1 `run.py` menu + pass-through, `run.bat`, `run.sh`, README quick-start. Tests: T-40..T-44.
+
 ## Coverage: every test T-01..T-37 is assigned to a task above.

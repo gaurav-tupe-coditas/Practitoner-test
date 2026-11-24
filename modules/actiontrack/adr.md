@@ -25,3 +25,11 @@ Central ADRs: `docs/adr/ADR-0001`, `ADR-0002`. Newest last.
 - **Context:** Sample notes say `schedule cutover for Saturday 10 Oct` and `circulate the summary tomorrow`; R12 left both undated, so they fell back to meeting + 7 days.
 - **Decision:** Add `for` to the due keywords and accept a trailing `tomorrow`, `today` or `EOD` at the end of the line. A candidate must resolve completely to count, so `for 5 customers` or `for invoice rounding` stay undated. Requirements bumped to v1.1 (AC-4.4 only).
 - **Consequences:** Two sample items get real dates. Small risk: `for Friday` in prose now reads as a due date.
+
+### ADR-ACTIONTRACK-004: Launcher is one stdlib file calling the CLI in-process
+- **Status:** Accepted
+- **Date:** 2026-11-24
+- **Decided by:** User (asked for a single run file that shows how to use the app)
+- **Context:** Users should not need to learn argparse flags or manage paths.
+- **Decision:** `run.py` at the repo root: menu when run without arguments, pass-through with arguments. It calls `cli.main` directly, keeps its data next to itself, and adds no dependency. `run.bat` and `run.sh` are two-line wrappers that find Python.
+- **Consequences:** One entry point for non-technical users; the CLI stays the single source of behaviour, so the menu cannot drift from it.

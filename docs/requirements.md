@@ -1,6 +1,6 @@
 # actiontrack: Requirements
 
-**Version:** v1.1 (2026-11-24). v1.0 was frozen the same day; v1.1 is a user-requested change to AC-4.4 only.
+**Version:** v1.2 (2026-11-24). v1.0 was frozen the same day. v1.1: user-requested change to AC-4.4. v1.2: user-requested FR-10 (easy start launcher); no earlier requirement changed.
 **Date:** 2026-11-24
 **Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and marked **Assumption**)
 
@@ -84,6 +84,16 @@ The same action repeats across meetings (e.g. "Priya N. to send the revised quot
 ### FR-9 Malformed notes
 - AC-9.1 A note is malformed when it is empty, not valid UTF-8 text, has no recognisable date, or has no recognisable header. Examples in `notes/`: the 0-byte `2026-09-09-notes-final-v2.md`, binary `scratch.md`, undated `2026-10-03-sales-pipeline.md`, headerless `untitled.md`.
 - AC-9.2 Malformed notes are skipped whole, reported with file name and reason, and never crash the run. Their items are not stored. (**Assumption A-10**: items from an undated note are dropped rather than stored without a base date.)
+
+### FR-10 Easy start (v1.2)
+One file a user can run directly, which takes care of setup checks and shows how to use the app.
+- AC-10.1 `python run.py` (or `run.bat` on Windows, `run.sh` on macOS/Linux) with no arguments checks the Python version, then opens a numbered menu: load notes, show items, mark done, draft a follow-up, run self-test, help, quit. No install step is needed for the app itself (standard library only).
+- AC-10.2 Each menu action asks for its inputs, showing the default in brackets, and runs the same commands as the CLI (same output, same exit-code meanings). Errors appear as messages, never a traceback.
+- AC-10.3 On first launch, if there is no data file and a `notes/` folder next to the launcher, the menu offers to load it.
+- AC-10.4 With arguments, `python run.py <command> ...` behaves exactly like `python -m actiontrack <command> ...`.
+- AC-10.5 End of input or Ctrl+C exits cleanly with no traceback.
+- AC-10.6 The menu states that follow-ups are saved as draft files (or as a Gmail draft with the claude sink) and are never sent.
+- AC-10.7 The README starts with a quick-start section that tells the user to run this one file.
 
 ## 5. Non-functional requirements
 

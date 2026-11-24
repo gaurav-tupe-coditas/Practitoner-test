@@ -129,6 +129,9 @@ def _followup(args, store, today, out, err, sink_factory) -> int:
     except service.AmbiguousOwner as exc:
         print(f"AT-E002 '{exc.name}' matches several people: {', '.join(exc.candidates)}. Use a full name.", file=err)
         return 2
+    except service.NotFound:
+        print(f"AT-E001 no one named '{args.owner}' found. Load the notes first, or check the spelling.", file=err)
+        return 1
     except SinkError as exc:
         print(f"AT-E004 could not create the draft: {exc}", file=err)
         if Capture.draft:

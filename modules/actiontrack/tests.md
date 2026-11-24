@@ -63,3 +63,13 @@ Every rule R1-R19 and every AC (1.1-1.4, 2.1-2.6, 3.1-3.6, 4.1-4.5, 5.1-5.3, 6.1
 |---|---|---|---|---|
 | T-38 due-for-and-trailing | R12, AC-4.4 | U | `schedule cutover for Saturday 10 Oct` (meeting 2026-09-29); `circulate the summary tomorrow` (meeting 2026-09-30); prose `Everybody should look Friday` | due 2026-10-10; due 2026-10-01; prose still no due |
 | T-39 report-unique | AC-1.2 | I | `Everyone to ...` with several attendees | each ambiguous / no-due line appears once in the report |
+
+## v1.2 additions (launcher)
+
+| Test | Rule / AC | Lvl | Setup | Expected |
+|---|---|---|---|---|
+| T-40 menu-flow | R20, AC-10.1..10.3, 10.6 | I | scripted input: accept first-launch load, list, done 1, follow-up (file sink), quit; temp db/notes/drafts | notes loaded, list shows items, item 1 done, draft file written, exit 0 |
+| T-41 passthrough | R20, AC-10.4 | I | `run.main(["--db", tmp, "list"])` | same output and exit code as the CLI (`no items`, 0) |
+| T-42 clean-exit | R20, AC-10.5 | I | input raises EOFError / KeyboardInterrupt | returns 0, no traceback |
+| T-43 bad-input | R20, AC-10.2 | I | menu: non-numeric id, bad email, unknown choice | message shown, menu continues |
+| T-44 launchers | AC-10.1, 10.7 | U | `run.bat`, `run.sh` exist and call `run.py`; README has a quick-start with `run.py` | present |

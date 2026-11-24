@@ -26,6 +26,8 @@
 | R18 | `followup`: overdue first, then open; none: message, no draft; ambiguous owner exit 2; `--to` required. | AC-8.1..8.3, 8.5 |
 | R19 | `DraftSink` has only `create_draft`; no send path exists in the code base. Sink failure prints the draft, exit 3. | AC-8.4, 8.6 |
 
+| R20 | `run.py` (v1.2): no arguments -> version check (3.10+) then menu; with arguments -> same as `python -m actiontrack`. Menu data lives next to the launcher (`actiontrack.db`, `drafts/`, `notes/`), so it works from any folder. Offers to load `notes/` when no data file exists. EOF or Ctrl+C exits 0. Menu calls `cli.main` in-process; the only subprocess is the optional self-test (`pytest`). | AC-10.1..10.6 |
+
 ## 2. Due-phrase resolution (base = meeting date `M`)
 
 | Phrase | Result |
