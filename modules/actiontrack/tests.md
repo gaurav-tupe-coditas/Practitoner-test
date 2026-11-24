@@ -23,7 +23,7 @@
 | T-11 owner-forms | R9, AC-3.1/3.6 | U | `Priya N.`, `@anita`, `Anita & Rahul to agree...`, `Lena (with Priya) to collect...` | Priya N. -> initial N; `@anita` -> Anita; `&` -> two items; `(with ...)` -> Lena only |
 | T-12 owner-resolve | R10, AC-3.2..3.4 | U | attendees Priya Nair + Priya Shah; `Priya`; `Priya N.`; no-attendee note with `Rahul`; no-attendee note with `Sam` | `Priya` ambiguous; `Priya N.` = Priya Nair; `Rahul` ambiguous (two known); `Sam` = Sam Okafor |
 | T-13 group-owners | R11, AC-3.5 | U | `Everyone to submit...` with 9 attendees; `TBD to write...`; `Team to decide...` | 9 items (one per attendee); TBD unassigned; Team expands |
-| T-14 due-prefix | R12, AC-4.4 | U | `Everybody should look Friday` in prose, `to send slides by Friday` | prose ignored; second resolves |
+| T-14 due-prefix | R12, AC-4.4 (v1.1 adds `for` and trailing forms, see T-38) | U | `Everybody should look Friday` in prose, `to send slides by Friday` | prose ignored; second resolves |
 | T-15 due-table | R13, AC-4.1..4.5, A-6, ADR-002 | U | table-driven over the section 2 phrases with `M = 2026-10-05 (Mon)` and `M = 2026-09-04 (Fri)` | each equals the hand-computed date: Fri-on-Fri = same day; `next Tuesday` = 2026-10-13; `end of next week` from 2026-09-03 = 2026-09-11; `end of month` = 2026-09-30; `mid-October` unresolved |
 | T-16 due-default | R13, AC-4.5/6.2 | I | item with no due, meeting 2026-09-23 | `due` NULL, `due_defaulted` 1, effective 2026-09-30, list shows `(default)` |
 | T-17 dedup-acme | R14, AC-5.1..5.3, ADR-001 | I | ingest 09-01, 09-08, 09-15 notes (quote to Acme x3) | one item for Priya Nair, 3 sources, done (09-15 has `[x]`), due 2026-09-11 (09-08 meeting's "by Friday"); 09-15 states no due and does not erase it (**Assumption S-5**: AC-5.3 means the latest meeting that states a due date) |
@@ -56,3 +56,10 @@
 ## Coverage check
 
 Every rule R1-R19 and every AC (1.1-1.4, 2.1-2.6, 3.1-3.6, 4.1-4.5, 5.1-5.3, 6.1-6.5, 7.1-7.3, 8.1-8.6, 9.1-9.2) appears above. AC-2.6 (item keeps owner, task, due, status, source, meeting date) is checked inside T-17 and T-24.
+
+## v1.1 additions
+
+| Test | Rule / AC | Lvl | Setup | Expected |
+|---|---|---|---|---|
+| T-38 due-for-and-trailing | R12, AC-4.4 | U | `schedule cutover for Saturday 10 Oct` (meeting 2026-09-29); `circulate the summary tomorrow` (meeting 2026-09-30); prose `Everybody should look Friday` | due 2026-10-10; due 2026-10-01; prose still no due |
+| T-39 report-unique | AC-1.2 | I | `Everyone to ...` with several attendees | each ambiguous / no-due line appears once in the report |

@@ -48,8 +48,8 @@ class Report:
         out = [f"read {self.read} files"]
         out += [f"skipped {f}: {why}" for f, why in self.skipped]
         out += [f"added {self.added}", f"updated {self.updated}"]
-        out += [f"ambiguous owner: {a}" for a in self.ambiguous]
-        out += [f"no/defaulted due: {n}" for n in self.no_due]
+        out += [f"ambiguous owner: {a}" for a in dict.fromkeys(self.ambiguous)]   # unique, in order
+        out += [f"no/defaulted due: {n}" for n in dict.fromkeys(self.no_due)]
         return out
 
 

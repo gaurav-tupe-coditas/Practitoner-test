@@ -1,6 +1,6 @@
 # actiontrack: Requirements
 
-**Version:** v1.0 FROZEN 2026-11-24. Later changes are new versions, on request only.
+**Version:** v1.1 (2026-11-24). v1.0 was frozen the same day; v1.1 is a user-requested change to AC-4.4 only.
 **Date:** 2026-11-24
 **Source:** `docs/baseReq.md` (truncated; gaps inferred from `notes/` and marked **Assumption**)
 
@@ -50,7 +50,7 @@ Each note has a date, attendees and free-form discussion. Action items are check
 - AC-4.1 Due dates are resolved to a real date relative to the **meeting date**, not the ingest date.
 - AC-4.2 Supported phrases: ISO date; `10 Sep`, `Oct 3rd`, `2 Oct`, `Wed 16 Sep`; weekday names (`by Friday`, `Wed`, `Mon`); `tomorrow`; `by tomorrow`; `EOD` (same day); `next Tuesday`; `end of month`; `end of next week`.
 - AC-4.3 A bare weekday means the first such weekday **on or after** the meeting date: a Friday meeting saying "by Friday" means that same day. (**Decided 2026-11-24, A-6**)
-- AC-4.4 `by Friday` style phrases are only read after `by`, `due`, `before`, `until`, `from` or a dash, so words in the task text are not mistaken for dates.
+- AC-4.4 `by Friday` style phrases are only read after `by`, `due`, `before`, `until`, `from`, `for` or a dash, or as a trailing `tomorrow`, `today` or `EOD` at the end of the line, so other words in the task text are not mistaken for dates. (v1.1: `for` and the trailing forms added at user request, 2026-11-24)
 - AC-4.5 Vague or missing due dates (`mid-October`, none) are never guessed from the text. The stored due date stays empty, the item is listed in the ingest report, and the **effective due date** is the meeting date + 7 days (see AC-6.2). (**Decided 2026-11-24, A-9; A-7**)
 
 ### FR-5 Duplicates

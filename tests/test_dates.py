@@ -60,3 +60,11 @@ def test_split_due_dash_and_iso():
 def test_effective_due_default():
     assert effective_due(None, date(2026, 9, 23)) == date(2026, 9, 30)
     assert effective_due(date(2026, 9, 1), date(2026, 9, 23)) == date(2026, 9, 1)
+
+
+def test_for_and_trailing_forms():  # T-38 (v1.1)
+    assert split_due("schedule cutover for Saturday 10 Oct", date(2026, 9, 29)) == ("schedule cutover", date(2026, 10, 10))
+    assert split_due("circulate the summary tomorrow", date(2026, 9, 30)) == ("circulate the summary", date(2026, 10, 1))
+    assert split_due("Everybody should look Friday", MON)[1] is None
+    assert split_due("prepare for 5 customers", MON)[1] is None
+    assert split_due("run tests for invoice rounding by end of next week", THU)[1] == date(2026, 9, 11)

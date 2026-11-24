@@ -104,7 +104,8 @@ def resolve_due(phrase: str, meeting: date) -> date | None:
     return None
 
 
-_KEYWORD = re.compile(r"\b(?:by|due|before|until|from)\b|\s[—–-]+\s")
+_KEYWORD = re.compile(r"\b(?:by|due|before|until|from|for)\b|\s[—–-]+\s")
+_TRAILING = re.compile(r"\s((?:eod )?tomorrow|eod|today)[.\s]*$", re.IGNORECASE)
 
 
 def split_due(text: str, meeting: date) -> tuple[str, date | None]:
@@ -116,6 +117,9 @@ def split_due(text: str, meeting: date) -> tuple[str, date | None]:
     candidates = [(m.start(), text[m.end():]) for m in _KEYWORD.finditer(text)]
     for m in re.finditer(r"\bon\s+(\d{4}-\d{2}-\d{2})\b", text):
         candidates.append((m.start(), m.group(1)))
+    t = _TRAILING.search(text)                      # v1.1: trailing "tomorrow" / "today" / "EOD"
+    if t:
+        candidates.append((t.start(), t.group(1)))
     for start, rest in sorted(candidates, key=lambda c: c[0]):
         d = resolve_due(rest, meeting)
         if d:

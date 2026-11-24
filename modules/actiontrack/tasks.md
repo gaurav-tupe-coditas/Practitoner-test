@@ -15,7 +15,7 @@
 
 ## Phase 4: store and ingest
 - [x] 4.1 `store.py` DDL and queries per spec section 5, `known_people_by_first_name`. Tests: store round-trip in T-04.
-- [x] 4.2 `service.ingest`: two-pass, normalised dedup key, due-wins (S-5), never reopen, report. Files: `service.py`, `tests/test_ingest.py`. Tests: T-01, T-03 (service level), T-04, T-17, T-18, T-19, T-34.
+- [x] 4.2 `service.ingest`: two-pass, normalised dedup key, due-wins (S-5), never reopen, report. Files: `service.py`, `tests/test_service.py`. Tests: T-01, T-03 (service level), T-04, T-17, T-18, T-19, T-34.
 
 ## Phase 5: list and done
 - [x] 5.1 `service.list_items`, `service.mark_done`, `cli.py` `list` and `done`, exit codes and `AT-E` messages. Tests: T-20, T-21, T-22, T-23.

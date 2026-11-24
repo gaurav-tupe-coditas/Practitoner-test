@@ -17,7 +17,7 @@
 | R9 | Owner forms: `Priya`, `Priya N.`, `@anita`, `A & B` (one item each), `A (with B)` (owner A). | AC-3.1, AC-3.6 |
 | R10 | Owner resolved against attendees (initial narrows); several matches: `ambiguous`; no attendees: registry, unique match or ambiguous. | AC-3.2..3.4 |
 | R11 | `Everyone`/`Team`/`All`: one item per attendee (unassigned if no attendees). `Someone`/`TBD`: unassigned. | AC-3.5 |
-| R12 | Due phrase read only after `by`, `due`, `before`, `until`, `from`, or a dash; table Due cell is read whole. | AC-4.4 |
+| R12 | Due phrase read only after `by`, `due`, `before`, `until`, `from`, `for`, or a dash, or as a trailing `tomorrow`/`today`/`EOD` at end of line (v1.1); table Due cell is read whole. | AC-4.4 |
 | R13 | Due resolution: see section 2. No phrase or unresolvable: `due` NULL, `due_defaulted=1`, effective due = meeting + 7 days. | AC-4.1..4.5 |
 | R14 | Dedup key per ADR-ACTIONTRACK-001. Duplicates: add source, latest meeting's due wins, any `[x]` makes it done, never reopen. | AC-5.1..5.3 |
 | R15 | Overdue = open and effective due < today. Done never overdue. | AC-6.2 |

@@ -118,3 +118,10 @@ def test_done_cases(tmp_path, store):  # T-23
         service.mark_done(store, 9999, TODAY)
     service.ingest(store, str(tmp_path))
     assert store.get(1).id == 1
+
+
+def test_report_lines_unique(tmp_path, store):  # T-39
+    at = ["Priya Nair", "Priya Shah", "Sam Okafor"]
+    write_note(tmp_path, "1.md", "2026-09-18", at, ["- [ ] Everyone to review the prototype"])
+    lines = service.ingest(store, str(tmp_path)).lines()
+    assert len([l for l in lines if l.startswith("no/defaulted due")]) == 1
