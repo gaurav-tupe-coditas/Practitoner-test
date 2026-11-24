@@ -184,3 +184,12 @@ def test_module_entrypoint(tmp_path):
     r = subprocess.run([sys.executable, "-m", "actiontrack", "--db", str(tmp_path / "e.db"), "list"],
                        cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0 and "no items" in r.stdout
+
+
+def test_claude_sink_argv_allows_only_create_draft():  # S-3 (verified against the live connector)
+    from actiontrack.sinks import GMAIL_CREATE_DRAFT_TOOL
+    d = Draft("Sam Okafor", "s@example.invalid", "subj", "body", date(2026, 10, 1))
+    argv = ClaudeGmailDraftSink().argv(d)
+    assert GMAIL_CREATE_DRAFT_TOOL == "mcp__claude_ai_Gmail__create_draft"
+    assert argv[:2] == ["claude", "-p"] and argv[-2:] == ["--allowedTools", "mcp__claude_ai_Gmail__create_draft"]
+    assert argv.count("--allowedTools") == 1
