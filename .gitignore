@@ -19,3 +19,7 @@ drafts/
 # Claude Code local state
 .claude/worktrees/
 .claude/settings.local.json
+
+# Raw conversation exports: contain machine paths and account names. Only the sanitised docs/conversation.md is committed.
+docs/conversation.raw.md
+*.raw.md

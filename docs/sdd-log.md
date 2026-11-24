@@ -36,3 +36,4 @@ Running log of the spec-driven (sdd-epic) run for **actiontrack**. One row per s
 | 17:05 | Fix | `service.followup`, `cli.py` | Found by the launcher tests: follow-up for a name not in the data said "matches several people: ." Now `AT-E001 no one named ... found`, exit 1 |
 | 17:20 | Change | `requirements.md` v1.3 (FR-11), `spec.md` R21, `tests.md` T-45..T-49, ADR-ACTIONTRACK-005 | User-requested: HTML report in the app, and a generated project summary in docs |
 | 17:25 | Handoff | `modules/NEW-SESSION-PROMPTS.md` | Phase 9 started (`report.py` written, rest pending). Work saved for a new session so the Gmail connector can be checked live |
+| 17:30 | Export | `.gitignore` | Raw conversation exports are git-ignored; only a sanitised `docs/conversation.md` may be committed (the raw transcript holds machine paths and account names) |
